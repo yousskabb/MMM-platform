@@ -9,7 +9,7 @@ interface TabConfig {
 
 interface SidebarProps {
   activeTab: string;
-  onTabChange: (tab: any) => void;
+  onTabChange: (tab: string) => void;
   tabs: TabConfig[];
 }
 

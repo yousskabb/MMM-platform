@@ -4,204 +4,82 @@ import { filterData } from '../../data/mockData';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell, Treemap } from 'recharts';
 import { Play, BarChart4, Calculator, Zap } from 'lucide-react';
 import ChannelColorBadge from '../ui/ChannelColorBadge';
-
-interface SimulationConfig {
-  name: string;
-  kpi: 'ROI' | 'Revenue' | 'Volume';
-  totalBudget: number;
-  startDate: Date;
-  endDate: Date;
-  granularity: 'Monthly' | 'Quarterly' | 'Yearly';
-  selectedChannels: string[];
-}
-
-interface OptimizationConfig {
-  name: string;
-  kpi: 'ROI' | 'Revenue' | 'Volume';
-  totalBudget: number;
-  startDate: Date;
-  endDate: Date;
-  constraints: {
-    channel: string;
-    min: number;
-    max: number;
-    fixed: boolean;
-  }[];
-  allowAiOverride: boolean;
-}
+// Import the components (adjust paths if necessary)
+import CreateSimulation from '../simulations/CreateSimulation';
+import CreateOptimization from '../optimization/CreateOptimization';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table';
 
 interface SimulationsTabProps {
   filters: FilterState;
 }
 
-// Return ROI based on budget change (simplified model)
-const calculateExpectedROI = (currentBudget: number, newBudget: number, currentROI: number): number => {
-  // Simple diminishing returns model
-  // If budget increases, ROI decreases (diminishing returns)
-  // If budget decreases, ROI increases (efficiency)
-  if (newBudget === currentBudget) return currentROI;
+// Custom component for the Treemap
+const CustomizedContent = (props: any) => {
+  const { x, y, width, height, index, name, percentage, value } = props;
   
-  const ratio = newBudget / currentBudget;
-  // Diminishing returns factor: smaller = more pronounced diminishing returns
-  const diminishingFactor = 0.7;
-  
-  // Calculate adjusted ROI with diminishing returns
-  if (ratio > 1) {
-    // Budget increased
-    return currentROI * Math.pow(ratio, -1 * (1 - diminishingFactor));
-  } else {
-    // Budget decreased
-    return currentROI * Math.pow(ratio, -1 * (diminishingFactor - 0.5));
-  }
+  return (
+    <g>
+      <rect
+        x={x}
+        y={y}
+        width={width}
+        height={height}
+        style={{ fill: COLORS[index % COLORS.length], stroke: '#fff', strokeWidth: 2 }}
+      />
+      {width > 70 && height > 60 ? (
+        <>
+          <text x={x + width / 2} y={y + height / 2 - 12} textAnchor="middle" fill="#fff" fontWeight="bold">
+            {name}
+          </text>
+          <text x={x + width / 2} y={y + height / 2 + 12} textAnchor="middle" fill="#fff">
+            {percentage}%
+          </text>
+        </>
+      ) : null}
+    </g>
+  );
 };
 
-// Optimize budget allocation
-const optimizeBudget = (data: SimulationData[], totalBudget: number): SimulationData[] => {
-  // Sort channels by ROI (highest first)
-  const channelsByEfficiency = [...data].sort((a, b) => {
-    // Calculate the marginal ROI (derivative of the ROI function)
-    const marginalROIa = calculateExpectedROI(a.currentBudget, a.currentBudget * 1.1, a.expectedROI) - a.expectedROI;
-    const marginalROIb = calculateExpectedROI(b.currentBudget, b.currentBudget * 1.1, b.expectedROI) - b.expectedROI;
-    
-    return marginalROIb - marginalROIa;
-  });
-  
-  // Initial budget is minimum for each channel (50% of current budget as a floor)
-  const result = channelsByEfficiency.map(channel => ({
-    ...channel,
-    newBudget: channel.currentBudget * 0.5
-  }));
-  
-  // Calculate remaining budget
-  let remainingBudget = totalBudget - result.reduce((sum, channel) => sum + channel.newBudget, 0);
-  
-  // Distribute remaining budget to channels with highest ROI first
-  while (remainingBudget > 1000 && channelsByEfficiency.length > 0) {
-    // Find channel with highest marginal ROI
-    const indexOfHighestROI = channelsByEfficiency
-      .map((channel, index) => {
-        const matchingChannel = result.find(c => c.channel === channel.channel);
-        if (!matchingChannel) return { index, marginalROI: 0 };
-        
-        const currentNewBudget = matchingChannel.newBudget;
-        const incrementAmount = Math.min(remainingBudget, 10000);
-        const roiAtCurrent = calculateExpectedROI(channel.currentBudget, currentNewBudget, channel.expectedROI);
-        const roiAtIncreased = calculateExpectedROI(channel.currentBudget, currentNewBudget + incrementAmount, channel.expectedROI);
-        
-        // Calculate marginal ROI
-        const marginalROI = (roiAtIncreased - roiAtCurrent) / incrementAmount;
-        
-        return { index, marginalROI };
-      })
-      .sort((a, b) => b.marginalROI - a.marginalROI)[0].index;
-    
-    // No more positive marginal ROI
-    if (indexOfHighestROI === undefined) break;
-    
-    const channelToIncrease = channelsByEfficiency[indexOfHighestROI];
-    const matchingIndex = result.findIndex(c => c.channel === channelToIncrease.channel);
-    
-    // Increment budget for this channel
-    const incrementAmount = Math.min(remainingBudget, 10000);
-    result[matchingIndex].newBudget += incrementAmount;
-    remainingBudget -= incrementAmount;
-    
-    // Check if we've hit max budget for this channel (3x original as a ceiling)
-    if (result[matchingIndex].newBudget >= channelToIncrease.currentBudget * 3) {
-      // Remove from consideration
-      channelsByEfficiency.splice(indexOfHighestROI, 1);
-    }
-  }
-  
-  // Update expected ROI based on new budgets
-  return result.map(channel => ({
-    ...channel,
-    expectedROI: calculateExpectedROI(channel.currentBudget, channel.newBudget, channel.expectedROI)
-  }));
-};
+// Colors for the channels
+const COLORS = ["#8884d8", "#55B78D", "#82ca9d", "#ffc658", "#ff8042", "#0088fe"];
 
 const SimulationsTab: React.FC<SimulationsTabProps> = ({ filters }) => {
   const { simulationData: initialData } = filterData(filters.country, filters.brand, filters.dateRange);
   
   const [simulationData, setSimulationData] = useState<SimulationData[]>(initialData);
-  const [isOptimized, setIsOptimized] = useState(false);
   const [isSimulating, setIsSimulating] = useState(false);
-  const [showSimulationModal, setShowSimulationModal] = useState(false);
-  const [showOptimizationModal, setShowOptimizationModal] = useState(false);
-  const [simulationConfig, setSimulationConfig] = useState<SimulationConfig>({
-    name: '',
-    kpi: 'ROI',
-    totalBudget: 0,
-    startDate: new Date(),
-    endDate: new Date(),
-    granularity: 'Monthly',
-    selectedChannels: []
-  });
-  const [optimizationConfig, setOptimizationConfig] = useState<OptimizationConfig>({
-    name: '',
-    kpi: 'ROI',
-    totalBudget: 0,
-    startDate: new Date(),
-    endDate: new Date(),
-    constraints: [],
-    allowAiOverride: false
-  });
-
+  const [showSimulation, setShowSimulation] = useState(false);
+  const [showOptimization, setShowOptimization] = useState(false);
+  const [scenarios, setScenarios] = useState<any[]>([]);
+  
   // Reset simulation when filters change
   useEffect(() => {
     setSimulationData(initialData);
-    setIsOptimized(false);
     setIsSimulating(false);
   }, [filters, initialData]);
-
+  
   const handleBudgetChange = (channel: string, newValue: number) => {
-    setIsOptimized(false);
     setSimulationData(prevData => 
       prevData.map(item => {
         if (item.channel === channel) {
-          const expectedROI = calculateExpectedROI(item.currentBudget, newValue, item.expectedROI);
+          // Simple ROI calculation based on budget change
+          const expectedROI = item.expectedROI * (1 - (newValue - item.currentBudget) / item.currentBudget * 0.1);
           return {
             ...item,
             newBudget: newValue,
-            expectedROI
+            expectedROI: expectedROI > 0 ? expectedROI : item.expectedROI * 0.5
           };
         }
         return item;
       })
     );
   };
-
-  const handleCreateSimulation = () => {
-    setShowSimulationModal(true);
-  };
-
-  const handleStartSimulation = () => {
-    // Implement simulation logic based on config
-    setShowSimulationModal(false);
-    // Update simulation data...
-  };
-
-  const handleOptimize = () => {
-    setShowOptimizationModal(true);
-  };
-
-  const handleStartOptimization = () => {
-    setIsSimulating(true);
-    
-    // Simulate optimization calculation
-    setTimeout(() => {
-      const totalCurrentBudget = simulationData.reduce((sum, channel) => sum + channel.currentBudget, 0);
-      const optimizedData = optimizeBudget(simulationData, totalCurrentBudget);
-      setSimulationData(optimizedData);
-      setIsOptimized(true);
-      setIsSimulating(false);
-      setShowOptimizationModal(false);
-    }, 1000);
-  };
-
-  const handleResetSimulation = () => {
-    setSimulationData(initialData);
-    setIsOptimized(false);
+  
+  const handleAddScenario = (newScenario: any) => {
+    setScenarios(prev => [newScenario, ...prev]);
+    setShowSimulation(false);
+    setShowOptimization(false);
   };
   
   // Calculate totals
@@ -214,11 +92,11 @@ const SimulationsTab: React.FC<SimulationsTabProps> = ({ filters }) => {
   const avgCurrentROI = totalCurrentRevenue / totalCurrentBudget;
   const avgNewROI = totalNewRevenue / totalNewBudget;
   
-  // Format currency
+  // Format currency - update to use Euro symbol
   const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat('en-EU', {
       style: 'currency',
-      currency: 'USD',
+      currency: 'EUR',
       notation: value >= 1000000 ? 'compact' : 'standard',
       maximumFractionDigits: 1
     }).format(value);
@@ -238,6 +116,35 @@ const SimulationsTab: React.FC<SimulationsTabProps> = ({ filters }) => {
     };
   });
   
+  // Mock optimized budget data for the treemap
+  const optimizedBudget = [
+    { name: "TV", size: 125000, percentage: 35.7 },
+    { name: "Digital", size: 92000, percentage: 26.3 },
+    { name: "Radio", size: 48000, percentage: 13.7 },
+    { name: "Print", size: 18000, percentage: 5.1 },
+    { name: "CRM", size: 42000, percentage: 12.0 },
+    { name: "Promo", size: 25000, percentage: 7.2 }
+  ];
+  
+  // Render create simulation or optimization components if needed
+  if (showSimulation) {
+    return (
+      <CreateSimulation 
+        onClose={() => setShowSimulation(false)}
+        onComplete={handleAddScenario}
+      />
+    );
+  }
+  
+  if (showOptimization) {
+    return (
+      <CreateOptimization 
+        onClose={() => setShowOptimization(false)}
+        onComplete={handleAddScenario}
+      />
+    );
+  }
+  
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -245,17 +152,20 @@ const SimulationsTab: React.FC<SimulationsTabProps> = ({ filters }) => {
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="card h-40 flex flex-col justify-center items-center cursor-pointer hover:bg-slate-50 transition-colors" onClick={handleResetSimulation}>
+        <div 
+          className="border rounded-lg bg-white p-4 shadow-sm h-40 flex flex-col justify-center items-center cursor-pointer hover:bg-slate-50 transition-colors"
+          onClick={() => setShowSimulation(true)}
+        >
           <div className="w-12 h-12 rounded-full bg-primary-100 flex items-center justify-center mb-3">
             <Play size={24} className="text-primary-600" />
           </div>
           <h3 className="text-lg font-medium">Create New Simulation</h3>
-          <p className="text-sm text-slate-500 mt-1">Reset and start a new budget allocation</p>
+          <p className="text-sm text-slate-500 mt-1">Create a new budget allocation</p>
         </div>
         
         <div 
-          className={`card h-40 flex flex-col justify-center items-center cursor-pointer hover:bg-slate-50 transition-colors ${isSimulating ? 'opacity-50 pointer-events-none' : ''}`}
-          onClick={handleOptimize}
+          className="border rounded-lg bg-white p-4 shadow-sm h-40 flex flex-col justify-center items-center cursor-pointer hover:bg-slate-50 transition-colors"
+          onClick={() => setShowOptimization(true)}
         >
           <div className="w-12 h-12 rounded-full bg-accent-100 flex items-center justify-center mb-3">
             <Zap size={24} className="text-accent-600" />
@@ -267,8 +177,27 @@ const SimulationsTab: React.FC<SimulationsTabProps> = ({ filters }) => {
         </div>
       </div>
       
+      {scenarios.length > 0 && (
+        <div className="border rounded-lg bg-white p-4 shadow-sm">
+          <h3 className="text-lg font-medium mb-4">Your Scenarios</h3>
+          <div className="space-y-2">
+            {scenarios.map((scenario, index) => (
+              <div key={index} className="p-3 border rounded flex justify-between items-center">
+                <div>
+                  <h4 className="font-medium">{scenario.name}</h4>
+                  <p className="text-sm text-slate-500">
+                    {scenario.type} - ROI: {scenario.roi}x
+                  </p>
+                </div>
+                <p className="text-sm font-medium">{formatCurrency(scenario.contribution)}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 card">
+        <div className="lg:col-span-2 border rounded-lg bg-white p-4 shadow-sm">
           <h3 className="text-lg font-medium mb-4 flex items-center gap-2">
             <Calculator size={18} className="text-secondary-600" />
             Budget Allocation
@@ -332,7 +261,7 @@ const SimulationsTab: React.FC<SimulationsTabProps> = ({ filters }) => {
           </div>
         </div>
         
-        <div className="card">
+        <div className="border rounded-lg bg-white p-4 shadow-sm">
           <h3 className="text-lg font-medium mb-4 flex items-center gap-2">
             <BarChart4 size={18} className="text-primary-600" />
             Performance Summary
@@ -394,9 +323,8 @@ const SimulationsTab: React.FC<SimulationsTabProps> = ({ filters }) => {
         </div>
       </div>
       
-      {/* Comparison Chart */}
-      <div className="card">
-        <h3 className="text-lg font-medium mb-4">Current vs {isOptimized ? 'Optimized' : 'New'} Allocation</h3>
+      <div className="border rounded-lg bg-white p-4 shadow-sm">
+        <h3 className="text-lg font-medium mb-4">Current vs New Allocation</h3>
         <div className="h-80">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
@@ -415,11 +343,11 @@ const SimulationsTab: React.FC<SimulationsTabProps> = ({ filters }) => {
               <Legend 
                 payload={[
                   { value: 'Current Budget', type: 'square', color: '#94a3b8' },
-                  { value: isOptimized ? 'Optimized Budget' : 'New Budget', type: 'square', color: '#3b82f6' }
+                  { value: 'New Budget', type: 'square', color: '#3b82f6' }
                 ]}
               />
               <Bar dataKey="current" name="Current Budget" fill="#94a3b8" />
-              <Bar dataKey="new" name={isOptimized ? 'Optimized Budget' : 'New Budget'}>
+              <Bar dataKey="new" name="New Budget">
                 {comparisonChartData.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={entry.color} />
                 ))}
@@ -429,97 +357,59 @@ const SimulationsTab: React.FC<SimulationsTabProps> = ({ filters }) => {
         </div>
       </div>
       
-      {isOptimized && (
-        <div className="card bg-success-50 border border-success-200">
-          <h3 className="text-lg font-medium mb-3 text-success-800">Optimization Results</h3>
-          <p className="text-slate-700 mb-3">
-            The optimization algorithm has redistributed your budget to maximize overall ROI while maintaining the total investment of {formatCurrency(totalCurrentBudget)}.
-          </p>
-          <div className="space-y-2">
-            <p className="text-sm text-slate-600">
-              <span className="font-semibold">Expected Revenue Increase:</span> {formatCurrency(totalNewRevenue - totalCurrentRevenue)} ({((totalNewRevenue / totalCurrentRevenue - 1) * 100).toFixed(1)}%)
-            </p>
-            <p className="text-sm text-slate-600">
-              <span className="font-semibold">ROI Improvement:</span> From {avgCurrentROI.toFixed(2)}x to {avgNewROI.toFixed(2)}x ({((avgNewROI / avgCurrentROI - 1) * 100).toFixed(1)}%)
-            </p>
-            <p className="text-sm text-slate-600">
-              <span className="font-semibold">Major Changes:</span> Increased investment in high-performing channels like {simulationData.sort((a, b) => (b.newBudget/b.currentBudget) - (a.newBudget/a.currentBudget))[0].channel} and decreased in lower-performing channels like {simulationData.sort((a, b) => (a.newBudget/a.currentBudget) - (b.newBudget/b.currentBudget))[0].channel}.
-            </p>
+      {/* Add the optimized budget allocation chart */}
+      <Card className="bg-white">
+        <CardHeader>
+          <CardTitle>Optimized Budget Allocation</CardTitle>
+          <CardDescription>
+            Recommended budget distribution based on best performing scenario
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="h-80 mb-6">
+            <ResponsiveContainer width="100%" height="100%">
+              <Treemap
+                data={optimizedBudget}
+                dataKey="size"
+                aspectRatio={4 / 3}
+                stroke="#fff"
+                content={<CustomizedContent />}
+              >
+                <Tooltip
+                  formatter={(value) => [`€${Number(value).toLocaleString()}`, "Budget"]}
+                  labelFormatter={(name) => `${name}`}
+                />
+              </Treemap>
+            </ResponsiveContainer>
           </div>
-        </div>
-      )}
-      
-      {/* Simulation Modal */}
-      {showSimulationModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-2xl w-full">
-            <h2 className="text-xl font-semibold mb-4">Create New Simulation</h2>
-            
-            {/* Step 1: KPI Selection */}
-            <div className="mb-4">
-              <label className="block text-sm font-medium mb-1">Select KPI</label>
-              <select
-                className="select w-full"
-                value={simulationConfig.kpi}
-                onChange={(e) => setSimulationConfig({
-                  ...simulationConfig,
-                  kpi: e.target.value as 'ROI' | 'Revenue' | 'Volume'
-                })}
-              >
-                <option value="ROI">ROI</option>
-                <option value="Revenue">Revenue</option>
-                <option value="Volume">Volume</option>
-              </select>
-            </div>
-            
-            {/* Step 2: Configuration */}
-            <div className="space-y-4">
-              {/* ... Configuration fields ... */}
-            </div>
-            
-            <div className="mt-6 flex justify-end gap-3">
-              <button
-                className="btn btn-secondary"
-                onClick={() => setShowSimulationModal(false)}
-              >
-                Cancel
-              </button>
-              <button
-                className="btn btn-primary"
-                onClick={handleStartSimulation}
-              >
-                Start Simulation
-              </button>
-            </div>
+
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Channel</TableHead>
+                  <TableHead className="text-right">Budget</TableHead>
+                  <TableHead className="text-right">Percentage</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {optimizedBudget.map((item, index) => (
+                  <TableRow key={index}>
+                    <TableCell className="font-medium">{item.name}</TableCell>
+                    <TableCell className="text-right">€{item.size.toLocaleString()}</TableCell>
+                    <TableCell className="text-right">{item.percentage}%</TableCell>
+                  </TableRow>
+                ))}
+                <TableRow className="bg-muted/50 font-medium">
+                  <TableCell>Total</TableCell>
+                  <TableCell className="text-right">€{optimizedBudget.reduce((sum, item) => sum + item.size, 0).toLocaleString()}</TableCell>
+                  <TableCell className="text-right">100%</TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
           </div>
-        </div>
-      )}
-      
-      {/* Optimization Modal */}
-      {showOptimizationModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-2xl w-full">
-            <h2 className="text-xl font-semibold mb-4">Optimization Settings</h2>
-            
-            {/* ... Optimization configuration fields ... */}
-            
-            <div className="mt-6 flex justify-end gap-3">
-              <button
-                className="btn btn-secondary"
-                onClick={() => setShowOptimizationModal(false)}
-              >
-                Cancel
-              </button>
-              <button
-                className="btn btn-primary"
-                onClick={handleStartOptimization}
-              >
-                Run Optimization
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+        </CardContent>
+      </Card>
       
       <footer className="mt-8 text-center text-sm text-slate-500">
         © 2025 All rights reserved. Powered by eleven strategy.
