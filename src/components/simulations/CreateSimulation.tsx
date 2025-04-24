@@ -66,25 +66,47 @@ const CreateSimulation: React.FC<{ onClose: () => void, onComplete: (scenario: a
     if (!lever) return 0;
     
     const baseRoi = lever.roi;
+    const refBudget = lever.refBudget;
     
-    const budgetRatio = lever.refBudget > 0 ? newBudget / lever.refBudget : 1;
+    // Calculate budget ratio (how much the new budget differs from the reference)
+    const budgetRatio = refBudget > 0 ? newBudget / refBudget : 1;
     
-    if (budgetRatio > 1.3) {
-      return baseRoi * (0.85 + (0.15 / budgetRatio));
+    let adjustedRoi = baseRoi;
+    
+    // More significant impact on ROI with budget changes
+    // Law of diminishing returns for higher investments
+    if (budgetRatio > 1.5) {
+      // Significant budget increase: Strong diminishing returns
+      adjustedRoi = baseRoi * (0.75 + (0.25 / budgetRatio));
+    } else if (budgetRatio > 1.2) {
+      // Moderate budget increase: Moderate diminishing returns
+      adjustedRoi = baseRoi * (0.85 + (0.15 / budgetRatio));
     } else if (budgetRatio > 1) {
-      return baseRoi * (0.95 + (0.05 / budgetRatio));
-    } else if (budgetRatio > 0.7) {
-      return baseRoi * (1 + (1 - budgetRatio) * 0.1);
+      // Small budget increase: Minor diminishing returns
+      adjustedRoi = baseRoi * (0.95 + (0.05 / budgetRatio));
+    } else if (budgetRatio > 0.8) {
+      // Small budget decrease: Slight ROI improvement
+      adjustedRoi = baseRoi * (1 + (1 - budgetRatio) * 0.1);
+    } else if (budgetRatio > 0.5) {
+      // Moderate budget decrease: Better ROI improvement
+      adjustedRoi = baseRoi * (1 + (1 - budgetRatio) * 0.2);
     } else {
-      return baseRoi * (1 + (1 - budgetRatio) * 0.2);
+      // Significant budget decrease: Best ROI improvement but much lower total contribution
+      adjustedRoi = baseRoi * (1 + (1 - budgetRatio) * 0.3);
     }
+    
+    return adjustedRoi;
   };
 
   const updateLeverBudget = (leverName: string, newValue: number) => {
     setLeverBudgets(prev => 
       prev.map(lever => {
         if (lever.name === leverName) {
+          const originalLever = levers.find(l => l.name === leverName);
+          if (!originalLever) return lever;
+          
           const updatedRoi = calculateExpectedRoi(leverName, newValue);
+          
           return { 
             ...lever, 
             newBudget: newValue,
@@ -401,7 +423,10 @@ const CreateSimulation: React.FC<{ onClose: () => void, onComplete: (scenario: a
                           {calculateVariation().toFixed(2)}%
                         </TableCell>
                         <TableCell className="text-right">
-                          {(leverBudgets.reduce((acc, lever) => acc + lever.roi * lever.newBudget, 0) / calculateTotalNewBudget()).toFixed(1)}x
+                          {(leverBudgets.filter(lever => selectedLevers.includes(lever.name))
+                            .reduce((acc, lever) => acc + (lever.roi * lever.newBudget), 0) / 
+                            leverBudgets.filter(lever => selectedLevers.includes(lever.name))
+                            .reduce((acc, lever) => acc + lever.newBudget, 0)).toFixed(1)}x
                         </TableCell>
                       </TableRow>
                     </TableBody>
@@ -479,13 +504,13 @@ const CreateSimulation: React.FC<{ onClose: () => void, onComplete: (scenario: a
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Expected Contribution:</p>
                   <p className="text-xl font-bold">
-                    €{Math.round(leverBudgets.reduce((acc, lever) => acc + lever.roi * lever.newBudget, 0)).toLocaleString()}
+                    €{Math.round(leverBudgets.reduce((acc, lever) => acc + (lever.roi * lever.newBudget), 0)).toLocaleString()}
                   </p>
                 </div>
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Average ROI:</p>
                   <p className="text-xl font-bold">
-                    {(leverBudgets.reduce((acc, lever) => acc + lever.roi * lever.newBudget, 0) / calculateTotalNewBudget()).toFixed(1)}x
+                    {(leverBudgets.reduce((acc, lever) => acc + (lever.roi * lever.newBudget), 0) / calculateTotalNewBudget()).toFixed(1)}x
                   </p>
                 </div>
               </div>

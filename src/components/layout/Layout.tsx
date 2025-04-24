@@ -13,13 +13,19 @@ import ResponseCurvesTab from '../tabs/ResponseCurvesTab';
 
 type Tab = 'recap' | 'synergies' | 'roi' | 'budget' | 'simulations' | 'response' | 'chat';
 
-const tabConfig = [
+interface TabConfig {
+  id: Tab;
+  label: string;
+  icon: React.ReactNode;
+}
+
+const tabConfig: TabConfig[] = [
   { id: 'recap', label: 'Recap', icon: <Activity size={20} /> },
   { id: 'synergies', label: 'Synergies', icon: <LineChart size={20} /> },
   { id: 'roi', label: 'ROI', icon: <BarChart3 size={20} /> },
   { id: 'budget', label: 'Budget Planning', icon: <PieChart size={20} /> },
-  { id: 'simulations', label: 'Simulations', icon: <Calculator size={20} /> },
   { id: 'response', label: 'Response Curves', icon: <TrendingUp size={20} /> },
+  { id: 'simulations', label: 'Simulations', icon: <Calculator size={20} /> },
   { id: 'chat', label: 'Chat with Your Data', icon: <MessageCircle size={20} /> },
 ];
 

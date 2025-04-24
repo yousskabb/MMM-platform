@@ -596,10 +596,6 @@ const SimulationsTab: React.FC<SimulationsTabProps> = ({ filters }) => {
           </ResponsiveContainer>
         </div>
       </div>
-      
-      <footer className="mt-8 text-center text-sm text-slate-500">
-        © 2025 All rights reserved. Powered by eleven strategy.
-      </footer>
     </div>
   );
 };

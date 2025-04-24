@@ -115,7 +115,7 @@ const RecapTab: React.FC<RecapTabProps> = ({ filters }) => {
   const actionableSellOut = totalContribution; // Using contribution as actionable sell-out
   const actionableGrowth = 15; // Static for now
   
-  const avgROI = totalRevenue / totalInvestment;
+  const avgROI = parseFloat((totalRevenue / totalInvestment).toFixed(1));
   const totalROI = avgROI;
   const roiGrowth = 5; // Static for now
   
@@ -265,21 +265,21 @@ const RecapTab: React.FC<RecapTabProps> = ({ filters }) => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <KPICard 
           title="Total Investments" 
-          value={totalInvestment}
+          value={parseFloat(totalInvestment.toFixed(1))}
           indicator={investmentGrowth}
           icon={<DollarSign size={20} />}
           color="primary-600"
         />
         <KPICard 
           title="Total Sell-Out" 
-          value={totalSellOut}
+          value={parseFloat(totalSellOut.toFixed(1))}
           indicator={sellOutGrowth}
           icon={<BarChartIcon size={20} />}
           color="success-600"
         />
         <KPICard 
           title="Actionable Sell-Out" 
-          value={actionableSellOut}
+          value={parseFloat(actionableSellOut.toFixed(1))}
           indicator={actionableGrowth}
           icon={<TrendingUp size={20} />}
           color="accent-600"
@@ -598,10 +598,6 @@ const RecapTab: React.FC<RecapTabProps> = ({ filters }) => {
       {/* Add Optimization Impact Component */}
       <OptimizationImpact />
 
-      <footer className="mt-8 text-center text-sm text-slate-500">
-        © 2025 All rights reserved. Powered by eleven strategy.
-      </footer>
-      
       {showInsights && (
         <InsightModal 
           country={filters.country} 
