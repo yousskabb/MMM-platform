@@ -1,15 +1,17 @@
 import React from 'react';
 import { BarChart, ChevronLeft } from 'lucide-react';
 
+type Tab = 'recap' | 'synergies' | 'roi' | 'budget' | 'simulations' | 'response' | 'chat';
+
 interface TabConfig {
-  id: string;
+  id: Tab;
   label: string;
   icon: React.ReactNode;
 }
 
 interface SidebarProps {
-  activeTab: string;
-  onTabChange: (tab: string) => void;
+  activeTab: Tab;
+  onTabChange: (tab: Tab) => void;
   tabs: TabConfig[];
 }
 

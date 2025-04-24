@@ -26,8 +26,8 @@ const tabConfig = [
 const Layout: React.FC = () => {
   const [activeTab, setActiveTab] = useState<Tab>('recap');
   const [filters, setFilters] = useState<FilterState>({
-    country: 'USA',
-    brand: 'Alpha',
+    country: 'France',
+    brand: 'Novotel',
     dateRange: {
       startDate: new Date(2023, 0, 1),
       endDate: new Date(2023, 11, 31)
@@ -67,7 +67,7 @@ const Layout: React.FC = () => {
     <div className="flex h-screen bg-slate-50">
       <Sidebar 
         activeTab={activeTab} 
-        onTabChange={handleTabChange} 
+        onTabChange={(tab: Tab) => handleTabChange(tab)} 
         tabs={tabConfig} 
       />
       <div className="flex-1 flex flex-col overflow-hidden">

@@ -26,9 +26,9 @@ const BudgetPlanningTab: React.FC<BudgetPlanningTabProps> = ({ filters }) => {
   
   // Format currency
   const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat('en-EU', {
       style: 'currency',
-      currency: 'USD',
+      currency: 'EUR',
       notation: value >= 1000000 ? 'compact' : 'standard',
       maximumFractionDigits: 1
     }).format(value);
@@ -44,7 +44,7 @@ const BudgetPlanningTab: React.FC<BudgetPlanningTabProps> = ({ filters }) => {
       name: item.channel,
       [year1]: item.year1Budget,
       [year2]: item.year2Budget,
-      variation: item.variation,
+      variation: Math.round(item.variation), // Round to nearest integer
       color: channelData?.color || '#94a3b8'
     };
   });
@@ -75,22 +75,21 @@ const BudgetPlanningTab: React.FC<BudgetPlanningTabProps> = ({ filters }) => {
             >
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="name" />
-              <YAxis />
+              <YAxis 
+                tickFormatter={(value) => `€${value >= 1000 ? `${value/1000}k` : value}`}
+                label={{ value: 'Budget (€)', angle: -90, position: 'insideLeft' }}
+              />
               <Tooltip
                 formatter={(value, name) => {
                   if (name === 'variation') {
-                    return [`${value.toFixed(1)}%`, 'Variation'];
+                    return [`${Math.round(value as number)}%`, 'Variation'];
                   }
                   return [formatCurrency(value as number), name];
                 }}
               />
               <Legend />
               <Bar dataKey={year1} name={year1} fill="#94a3b8" />
-              <Bar dataKey={year2} name={year2}>
-                {chartData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
-                ))}
-              </Bar>
+              <Bar dataKey={year2} name={year2} fill="#3b82f6" />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -106,17 +105,22 @@ const BudgetPlanningTab: React.FC<BudgetPlanningTabProps> = ({ filters }) => {
               layout="vertical"
             >
               <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
-              <XAxis type="number" domain={['dataMin', 'dataMax']} />
+              <XAxis 
+                type="number" 
+                domain={['dataMin', 'dataMax']} 
+                tickFormatter={(value) => `${value}%`}
+                label={{ value: 'Variation (%)', position: 'insideBottom', offset: -5 }}
+              />
               <YAxis type="category" dataKey="name" width={80} />
               <Tooltip 
-                formatter={(value) => [`${value.toFixed(1)}%`, 'Variation']}
+                formatter={(value) => [`${Math.round(value as number)}%`, 'Variation']}
               />
               <ReferenceLine x={0} stroke="#000" />
               <Bar dataKey="variation" name="Budget Variation (%)">
                 {chartData.map((entry, index) => (
                   <Cell 
                     key={`cell-${index}`} 
-                    fill={entry.variation >= 0 ? entry.color : '#ef4444'} 
+                    fill={entry.variation > 0 ? '#22C55E' : '#ef4444'} 
                   />
                 ))}
               </Bar>
@@ -160,7 +164,7 @@ const BudgetPlanningTab: React.FC<BudgetPlanningTabProps> = ({ filters }) => {
                           ? 'bg-error-100 text-error-700'
                           : 'bg-slate-100 text-slate-700'
                     }`}>
-                      {item.variation > 0 ? '+' : ''}{item.variation.toFixed(1)}%
+                      {item.variation > 0 ? '+' : ''}{Math.round(item.variation)}%
                     </span>
                   </td>
                 </tr>
@@ -180,7 +184,7 @@ const BudgetPlanningTab: React.FC<BudgetPlanningTabProps> = ({ filters }) => {
                         ? 'bg-error-100 text-error-700'
                         : 'bg-slate-100 text-slate-700'
                   }`}>
-                    {totalVariation > 0 ? '+' : ''}{totalVariation.toFixed(1)}%
+                    {totalVariation > 0 ? '+' : ''}{Math.round(totalVariation)}%
                   </span>
                 </td>
               </tr>
@@ -193,7 +197,7 @@ const BudgetPlanningTab: React.FC<BudgetPlanningTabProps> = ({ filters }) => {
         <h3 className="text-lg font-medium mb-3">Planning Insights</h3>
         <div className="space-y-3">
           <p className="text-sm text-slate-700">
-            <span className="font-semibold">Budget Shift:</span> The data shows a trend toward {totalVariation > 0 ? 'increasing' : 'decreasing'} overall media investment by {Math.abs(totalVariation).toFixed(1)}% from {year1} to {year2}.
+            <span className="font-semibold">Budget Shift:</span> The data shows a trend toward {totalVariation > 0 ? 'increasing' : 'decreasing'} overall media investment by {Math.abs(Math.round(totalVariation))}% from {year1} to {year2}.
           </p>
           <p className="text-sm text-slate-700">
             <span className="font-semibold">Channel Prioritization:</span> The largest proportional increases are in {chartData.sort((a, b) => b.variation - a.variation)[0].name} and {chartData.sort((a, b) => b.variation - a.variation)[1].name}, suggesting strategic focus on these channels.

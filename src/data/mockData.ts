@@ -228,27 +228,68 @@ export const preGeneratedData = {
 };
 
 // Helper function to filter data by country, brand, etc.
-// In a real app, this would query the backend with these filters
+// Generate data variation based on country and brand
 export const filterData = (country: string, brand: string, dateRange: any) => {
-  // In a mock scenario, we'll just return the pre-generated data
-  // with a subtle random variation to simulate filtering
+  // Generate multipliers based on country and brand to create more variety
+  let countryMultiplier = 1.0;
+  switch(country) {
+    case 'France': countryMultiplier = 1.15; break;
+    case 'UK': countryMultiplier = 1.25; break;
+    case 'Spain': countryMultiplier = 0.85; break;
+    case 'Italy': countryMultiplier = 0.95; break;
+    case 'Germany': countryMultiplier = 1.30; break;
+    case 'Portugal': countryMultiplier = 0.75; break;
+    default: countryMultiplier = 1.0;
+  }
   
-  const variationFactor = (country.length + brand.length) % 3 === 0 ? 1.1 : 0.9;
+  let brandMultiplier = 1.0;
+  switch(brand) {
+    case 'Novotel': brandMultiplier = 1.10; break;
+    case 'Pullman': brandMultiplier = 1.35; break;
+    case 'Ibis': brandMultiplier = 0.90; break;
+    case 'Mercure': brandMultiplier = 1.05; break;
+    case 'Sofitel': brandMultiplier = 1.50; break;
+    default: brandMultiplier = 1.0;
+  }
+  
+  // Combined factor affects overall investment and revenue
+  const variationFactor = countryMultiplier * brandMultiplier;
+  
+  // Channel adjustment factors - different brands and countries have different channel performance
+  const channelFactors = {
+    'TV': country === 'France' || country === 'Italy' ? 1.2 : 0.9,
+    'Radio': country === 'Spain' || country === 'UK' ? 1.15 : 0.95,
+    'Print': brand === 'Sofitel' || brand === 'Pullman' ? 1.25 : 0.8,
+    'Digital': brand === 'Ibis' || brand === 'Novotel' ? 1.3 : 1.0,
+    'CRM': country === 'Germany' ? 1.4 : 1.0,
+    'Promo': brand === 'Mercure' ? 1.3 : 0.9
+  };
   
   return {
     channelData: preGeneratedData.channelData.map(item => ({
       ...item,
-      investment: item.investment * variationFactor,
-      revenue: item.revenue * variationFactor,
-      contribution: item.contribution * variationFactor
+      investment: item.investment * variationFactor * (channelFactors[item.channel] || 1.0),
+      revenue: item.revenue * variationFactor * (channelFactors[item.channel] || 1.0) * 1.1, // Revenue higher than investment for positive ROI
+      contribution: item.contribution * variationFactor * (channelFactors[item.channel] || 1.0),
+      roi: item.roi * (channelFactors[item.channel] || 1.0) // ROI affected by channel factors
     })),
-    monthlyData: preGeneratedData.monthlyData,
+    monthlyData: preGeneratedData.monthlyData.map(item => ({
+      ...item,
+      investment: item.investment * variationFactor * (channelFactors[item.channel] || 1.0),
+      revenue: item.revenue * variationFactor * (channelFactors[item.channel] || 1.0),
+      contribution: item.contribution * variationFactor * (channelFactors[item.channel] || 1.0),
+      roi: item.roi * (channelFactors[item.channel] || 1.0)
+    })),
     synergyData: preGeneratedData.synergyData,
-    yearComparisonData: preGeneratedData.yearComparisonData,
+    yearComparisonData: preGeneratedData.yearComparisonData.map(item => ({
+      ...item,
+      year1Budget: item.year1Budget * variationFactor * (channelFactors[item.channel] || 1.0),
+      year2Budget: item.year2Budget * variationFactor * (channelFactors[item.channel] || 1.0)
+    })),
     simulationData: preGeneratedData.simulationData.map(item => ({
       ...item,
-      currentBudget: item.currentBudget * variationFactor,
-      newBudget: item.newBudget * variationFactor
+      currentBudget: item.currentBudget * variationFactor * (channelFactors[item.channel] || 1.0),
+      newBudget: item.newBudget * variationFactor * (channelFactors[item.channel] || 1.0)
     }))
   };
 };

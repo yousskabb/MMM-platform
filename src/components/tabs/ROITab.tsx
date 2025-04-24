@@ -36,9 +36,9 @@ const ROITab: React.FC<ROITabProps> = ({ filters }) => {
   
   // Format currency
   const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat('en-EU', {
       style: 'currency',
-      currency: 'USD',
+      currency: 'EUR',
       notation: value >= 1000000 ? 'compact' : 'standard',
       maximumFractionDigits: 1
     }).format(value);
@@ -133,7 +133,7 @@ const ROITab: React.FC<ROITabProps> = ({ filters }) => {
                 <XAxis type="number" domain={[0, 'auto']} />
                 <YAxis type="category" dataKey="name" width={80} />
                 <Tooltip 
-                  formatter={(value) => [`${value.toFixed(2)}x`, 'ROI']}
+                  formatter={(value) => [`${(value as number).toFixed(2)}x`, 'ROI']}
                 />
                 <Bar dataKey="roi" name="ROI">
                   {chartData.map((entry, index) => (
@@ -146,7 +146,7 @@ const ROITab: React.FC<ROITabProps> = ({ filters }) => {
         </div>
         
         <div className="card">
-          <h3 className="text-lg font-medium mb-4">Investment vs. Revenue</h3>
+          <h3 className="text-lg font-medium mb-4">Investment vs. Incremental Revenue</h3>
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
@@ -159,7 +159,7 @@ const ROITab: React.FC<ROITabProps> = ({ filters }) => {
                 <Tooltip formatter={(value) => formatCurrency(value as number)} />
                 <Legend />
                 <Bar dataKey="investment" name="Investment" fill="#94a3b8" />
-                <Bar dataKey="revenue" name="Revenue">
+                <Bar dataKey="revenue" name="Incremental Revenue">
                   {chartData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
