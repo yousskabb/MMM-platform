@@ -9,8 +9,8 @@ interface FilterBarProps {
   onFilterChange: (filters: FilterState) => void;
 }
 
-const countries: Country[] = ['France', 'UK', 'Spain', 'Italy', 'Germany', 'Portugal'];
-const brands: Brand[] = ['Novotel', 'Pullman', 'Ibis', 'Mercure', 'Sofitel'];
+const countries: Country[] = ['France', 'UK', 'Spain', 'Italy', 'Germany', 'Portugal', 'All Countries'];
+const brands: Brand[] = ['Novotel', 'Pullman', 'Ibis', 'Mercure', 'Sofitel', 'All Brands'];
 
 const FilterBar: React.FC<FilterBarProps> = ({ filters, onFilterChange }) => {
   const [showDatePicker, setShowDatePicker] = useState(false);
