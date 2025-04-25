@@ -541,7 +541,7 @@ export const generateChatAnswer = (question: string, country: string = 'All Coun
   // Simple pattern matching for demo purposes
   if (question.toLowerCase().includes('best roi') || question.toLowerCase().includes('highest roi')) {
     const highestROIChannel = [...channelData].sort((a, b) => b.roi - a.roi)[0];
-    return `Based on the data for ${brandText} in ${countryText}, ${highestROIChannel.channel} delivers the best ROI at ${highestROIChannel.roi.toFixed(2)}x. For every $1 invested, you get $${highestROIChannel.roi.toFixed(2)} in return.`;
+    return `Based on the data for ${brandText} in ${countryText}, ${highestROIChannel.channel} delivers the best ROI at ${highestROIChannel.roi.toFixed(2)}x. For every €1 invested, you get €${highestROIChannel.roi.toFixed(2)} in return.`;
   }
   
   if (question.toLowerCase().includes('worst') || question.toLowerCase().includes('least efficient')) {
@@ -552,7 +552,7 @@ export const generateChatAnswer = (question: string, country: string = 'All Coun
   if (question.toLowerCase().includes('budget') || question.toLowerCase().includes('spend')) {
     const totalInvestment = channelData.reduce((sum, c) => sum + c.investment, 0);
     const highestInvestmentChannel = [...channelData].sort((a, b) => b.investment - a.investment)[0];
-    return `For ${brandText} in ${countryText}, the total media investment is $${(totalInvestment/1000000).toFixed(2)} million. The highest investment is in ${highestInvestmentChannel.channel} at $${(highestInvestmentChannel.investment/1000000).toFixed(2)} million (${((highestInvestmentChannel.investment / totalInvestment) * 100).toFixed(0)}% of total budget).`;
+    return `For ${brandText} in ${countryText}, the total media investment is €${(totalInvestment/1000000).toFixed(2)} million. The highest investment is in ${highestInvestmentChannel.channel} at €${(highestInvestmentChannel.investment/1000000).toFixed(2)} million (${((highestInvestmentChannel.investment / totalInvestment) * 100).toFixed(0)}% of total budget).`;
   }
   
   if (question.toLowerCase().includes('recommend') || question.toLowerCase().includes('suggest') || question.toLowerCase().includes('advice')) {

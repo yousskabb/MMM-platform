@@ -19,9 +19,9 @@ const KPICard: React.FC<KPICardProps> = ({
   className = ''
 }) => {
   const formattedValue = typeof value === 'number' 
-    ? new Intl.NumberFormat('en-US', { 
+    ? new Intl.NumberFormat('en-EU', { 
         style: 'currency', 
-        currency: 'USD',
+        currency: 'EUR',
         notation: value >= 1000000 ? 'compact' : 'standard',
         maximumFractionDigits: 1
       }).format(value)

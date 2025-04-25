@@ -3,7 +3,7 @@ import {
   PieChart as PieChartIcon, 
   BarChart as BarChartIcon, 
   LineChart as LineChartIcon, 
-  DollarSign,
+  Euro,
   TrendingUp,
   FileText
 } from 'lucide-react';
@@ -414,7 +414,7 @@ const RecapTab: React.FC<RecapTabProps> = ({ filters }) => {
           title="Total Investments" 
           value={parseFloat(totalInvestment.toFixed(1))}
           indicator={investmentGrowth}
-          icon={<DollarSign size={20} />}
+          icon={<Euro size={20} />}
           color="primary-600"
         />
         <KPICard 
