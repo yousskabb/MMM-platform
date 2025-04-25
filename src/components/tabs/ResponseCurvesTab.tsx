@@ -224,8 +224,14 @@ const ResponseCurvesTab: React.FC<ResponseCurvesTabProps> = ({ filters }) => {
   // Apply adjustment factors to base investment levels
   const currentInvestment: {[key: string]: number} = {};
   Object.keys(baseInvestment).forEach(channel => {
-    currentInvestment[channel] = baseInvestment[channel] * (adjustmentFactors[channel] || 1.0);
+    // Ensure we have a valid adjustment factor for each channel
+    const factor = adjustmentFactors[channel] || 1.0;
+    // Make sure each channel has a valid current investment value
+    currentInvestment[channel] = Math.max(10000, baseInvestment[channel] * factor);
   });
+  
+  // Verify current investment values for all channels
+  console.log('Current Investment Values:', currentInvestment);
   
   const data = generateCurveData(selectedChannel, showAllCurves);
   const channels = Object.keys(channelDefinitions);
@@ -361,9 +367,10 @@ const ResponseCurvesTab: React.FC<ResponseCurvesTabProps> = ({ filters }) => {
                   <ReferenceLine
                     x={currentInvestment[selectedChannel]}
                     stroke="#3b82f6"
-                    strokeWidth={2}
+                    strokeWidth={2.5}
+                    isFront={true}
                     label={{
-                      value: 'Current Investment', 
+                      value: `Current: ${formatCompactCurrency(currentInvestment[selectedChannel])}`, 
                       position: 'top', 
                       fill: '#1e40af',
                       fontSize: 12
@@ -414,10 +421,10 @@ const ResponseCurvesTab: React.FC<ResponseCurvesTabProps> = ({ filters }) => {
                       <ReferenceLine
                         x={currentInvestment[channel]}
                         stroke={color}
-                        strokeWidth={1.5}
-                        strokeDasharray="3 3"
+                        strokeWidth={2}
+                        isFront={true}
                         label={{
-                          value: `${channel}`, 
+                          value: `${channel}: ${formatCompactCurrency(currentInvestment[channel])}`, 
                           position: 'top',
                           fill: color,
                           fontSize: 10
@@ -448,11 +455,6 @@ const ResponseCurvesTab: React.FC<ResponseCurvesTabProps> = ({ filters }) => {
           <p className="text-slate-700 mb-2">
             For <span className="font-semibold">{selectedChannel}</span>, optimal ROI is achieved between {formatCurrency(optimalRange.min)} and {formatCurrency(optimalRange.max)}.
           </p>
-          <p className="text-slate-700">
-            Current investment is {formatCurrency(currentInvestment[selectedChannel])}, which is <span className={currentInvestment[selectedChannel] >= optimalRange.min && currentInvestment[selectedChannel] <= optimalRange.max ? 'text-success-700 font-medium' : 'text-error-700 font-medium'}>
-              {currentInvestment[selectedChannel] >= optimalRange.min && currentInvestment[selectedChannel] <= optimalRange.max ? 'within the optimal range' : 'outside the optimal range'}
-            </span>.
-          </p>
         </div>
         
         <div className="card bg-slate-50 border border-slate-200">
@@ -468,9 +470,9 @@ const ResponseCurvesTab: React.FC<ResponseCurvesTabProps> = ({ filters }) => {
           <p className="text-slate-700">
             <span className="font-medium">Recommendation:</span> {
               currentInvestment[selectedChannel] < optimalRange.min 
-                ? `Increase investment by ${formatCurrency(optimalRange.min - currentInvestment[selectedChannel])} (+${Math.round(((optimalRange.min / currentInvestment[selectedChannel]) - 1) * 100)}%) to reach optimal efficiency.` : 
+                ? `Increase investment by ${formatCurrency(optimalRange.min - currentInvestment[selectedChannel])} to reach optimal efficiency.` : 
               currentInvestment[selectedChannel] > optimalRange.max 
-                ? `Consider reallocating ${formatCurrency(currentInvestment[selectedChannel] - optimalRange.max)} (${Math.round(((currentInvestment[selectedChannel] / optimalRange.max) - 1) * 100)}% of current budget) to other channels with better ROI.` : 
+                ? `Consider reallocating ${formatCurrency(currentInvestment[selectedChannel] - optimalRange.max)} to other channels with better ROI.` : 
               `Maintain current investment levels to maximize returns.`
             }
           </p>
