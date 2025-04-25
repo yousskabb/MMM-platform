@@ -116,26 +116,7 @@ const BudgetPlanningTab: React.FC<BudgetPlanningTabProps> = ({ filters }) => {
                 formatter={(value) => [`${Math.round(value as number)}%`, 'Variation']}
               />
               <ReferenceLine x={0} stroke="#000" />
-              <Bar dataKey="variation" name="Budget Variation (%)">
-                {chartData.map((entry, index) => {
-                  // Access budget values reliably regardless of data structure
-                  const year1Value = entry[year1] || entry.year1Budget;
-                  const year2Value = entry[year2] || entry.year2Budget;
-                  
-                  // Calculate variation directly to ensure accuracy
-                  const calculatedVariation = ((year2Value - year1Value) / year1Value) * 100;
-                  
-                  // Set color based on the calculated variation
-                  const isNegative = calculatedVariation < 0;
-                  
-                  return (
-                    <Cell 
-                      key={`cell-${index}`} 
-                      fill={isNegative ? '#ef4444' : '#22C55E'} 
-                    />
-                  );
-                })}
-              </Bar>
+              <Bar dataKey="variation" name="Budget Variation (%)" fill="#4b5563" />
             </BarChart>
           </ResponsiveContainer>
         </div>
