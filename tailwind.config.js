@@ -18,10 +18,10 @@ export default {
         // Online media - shades of blue
         'digital': '#3B82F6',
         'digital-light': '#DBEAFE',
-        'crm': '#2563EB',
-        'crm-light': '#BFDBFE',
-        'promo': '#1D4ED8',
-        'promo-light': '#93C5FD',
+        'crm': '#7C3AED',
+        'crm-light': '#DDD6FE',
+        'promo': '#B91C1C',
+        'promo-light': '#FECACA',
         
         // UI colors
         'primary': {

@@ -50,15 +50,15 @@ export const channelDefinitions: Record<Channel, {
   },
   'CRM': { 
     mediaType: 'Online', 
-    color: '#2563EB', 
-    lightColor: '#BFDBFE',
+    color: '#7C3AED',
+    lightColor: '#DDD6FE',
     baseEfficiency: 2.5,
     diminishingFactor: 0.55
   },
   'Promo': { 
     mediaType: 'Online', 
-    color: '#1D4ED8', 
-    lightColor: '#93C5FD',
+    color: '#B91C1C',
+    lightColor: '#FECACA',
     baseEfficiency: 2.0,
     diminishingFactor: 0.8
   }

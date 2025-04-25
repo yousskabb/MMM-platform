@@ -117,12 +117,24 @@ const BudgetPlanningTab: React.FC<BudgetPlanningTabProps> = ({ filters }) => {
               />
               <ReferenceLine x={0} stroke="#000" />
               <Bar dataKey="variation" name="Budget Variation (%)">
-                {chartData.map((entry, index) => (
-                  <Cell 
-                    key={`cell-${index}`} 
-                    fill={entry.variation > 0 ? '#22C55E' : '#ef4444'} 
-                  />
-                ))}
+                {chartData.map((entry, index) => {
+                  // Access budget values reliably regardless of data structure
+                  const year1Value = entry[year1] || entry.year1Budget;
+                  const year2Value = entry[year2] || entry.year2Budget;
+                  
+                  // Calculate variation directly to ensure accuracy
+                  const calculatedVariation = ((year2Value - year1Value) / year1Value) * 100;
+                  
+                  // Set color based on the calculated variation
+                  const isNegative = calculatedVariation < 0;
+                  
+                  return (
+                    <Cell 
+                      key={`cell-${index}`} 
+                      fill={isNegative ? '#ef4444' : '#22C55E'} 
+                    />
+                  );
+                })}
               </Bar>
             </BarChart>
           </ResponsiveContainer>
@@ -158,13 +170,15 @@ const BudgetPlanningTab: React.FC<BudgetPlanningTabProps> = ({ filters }) => {
                   </td>
                   <td className="p-3 text-right">
                     <span className={`px-2 py-1 rounded-full text-sm ${
-                      item.variation > 0 
-                        ? 'bg-success-100 text-success-700' 
-                        : item.variation < 0
-                          ? 'bg-error-100 text-error-700'
-                          : 'bg-slate-100 text-slate-700'
+                      (() => {
+                        // Safely convert to number and check if negative
+                        const value = Number(item.variation);
+                        return !isNaN(value) && value < 0
+                          ? 'bg-error-100 text-error-700' 
+                          : 'bg-success-100 text-success-700';
+                      })()
                     }`}>
-                      {item.variation > 0 ? '+' : ''}{Math.round(item.variation)}%
+                      {Number(item.variation) > 0 ? '+' : ''}{Math.round(Number(item.variation))}%
                     </span>
                   </td>
                 </tr>
@@ -178,13 +192,15 @@ const BudgetPlanningTab: React.FC<BudgetPlanningTabProps> = ({ filters }) => {
                 <td className="p-3 text-right">{formatCurrency(totalYear2 - totalYear1)}</td>
                 <td className="p-3 text-right">
                   <span className={`px-2 py-1 rounded-full text-sm ${
-                    totalVariation > 0 
-                      ? 'bg-success-100 text-success-700' 
-                      : totalVariation < 0
-                        ? 'bg-error-100 text-error-700'
-                        : 'bg-slate-100 text-slate-700'
+                    (() => {
+                      // Safely convert to number and check if negative
+                      const value = Number(totalVariation);
+                      return !isNaN(value) && value < 0
+                        ? 'bg-error-100 text-error-700' 
+                        : 'bg-success-100 text-success-700';
+                    })()
                   }`}>
-                    {totalVariation > 0 ? '+' : ''}{Math.round(totalVariation)}%
+                    {Number(totalVariation) > 0 ? '+' : ''}{Math.round(Number(totalVariation))}%
                   </span>
                 </td>
               </tr>

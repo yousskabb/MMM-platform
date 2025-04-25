@@ -8,15 +8,15 @@ interface ResponseCurvesTabProps {
   filters: FilterState;
 }
 
-// Helper function to generate response curve data with smooth concave functions
+// Helper function to generate response curve data with smooth response curves
 const generateCurveData = (channel: string, showAll: boolean = false) => {
-  const baseInvestment = 200000; // €200K max investment
-  const points = 50; // Keep high number of data points for smooth curves
+  const baseInvestment = 250000; // Maximum investment amount
+  const points = 100; // More data points for smoother curves
   const step = baseInvestment / points;
   
   const channels = showAll ? Object.keys(channelDefinitions) : [channel];
   
-  // Current investment levels for each channel (adjusted to show variety)
+  // Current investment levels for each channel
   const currentInvestment: {[key: string]: number} = {
     'TV': 90000,
     'Radio': 55000,
@@ -24,6 +24,51 @@ const generateCurveData = (channel: string, showAll: boolean = false) => {
     'Digital': 70000,
     'CRM': 35000,
     'Promo': 60000
+  };
+  
+  // Channel-specific curve parameters with slight variations
+  const channelParams: {[key: string]: {
+    maxContribution: number, // a: saturation level (as a multiple of baseInvestment)
+    responseSpeed: number,   // b: response speed (higher = faster diminishing returns)
+    dropPoint: number,       // point where curve starts to drop (as fraction of baseInvestment)
+    dropRate: number         // how fast the curve drops after dropPoint
+  }} = {
+    'TV': {
+      maxContribution: 0.9,  // Reduced to keep max ROI below 3.0
+      responseSpeed: 9.5,
+      dropPoint: 0.75,
+      dropRate: 2.2
+    },
+    'Radio': {
+      maxContribution: 0.8,  // Reduced to keep max ROI below 3.0
+      responseSpeed: 10.2,
+      dropPoint: 0.7,
+      dropRate: 2.0
+    },
+    'Print': {
+      maxContribution: 0.75, // Reduced to keep max ROI below 3.0
+      responseSpeed: 11.0,
+      dropPoint: 0.8,
+      dropRate: 1.8
+    },
+    'Digital': {
+      maxContribution: 0.95, // Reduced to keep max ROI below 3.0
+      responseSpeed: 8.8,
+      dropPoint: 0.72,
+      dropRate: 2.4
+    },
+    'CRM': {
+      maxContribution: 0.85, // Reduced to keep max ROI below 3.0
+      responseSpeed: 9.8,
+      dropPoint: 0.78,
+      dropRate: 2.1
+    },
+    'Promo': {
+      maxContribution: 0.78, // Reduced to keep max ROI below 3.0
+      responseSpeed: 10.5,
+      dropPoint: 0.74,
+      dropRate: 1.9
+    }
   };
   
   return Array.from({ length: points + 1 }, (_, i) => {
@@ -34,57 +79,65 @@ const generateCurveData = (channel: string, showAll: boolean = false) => {
     };
     
     channels.forEach(ch => {
-      const { mediaType } = channelDefinitions[ch as keyof typeof channelDefinitions];
-      
-      // Parameters for concave curve shapes - making them more distinct per channel
-      let maxROI: number;
-      let concavity: number;
-      
-      // Assign different parameters to each channel to ensure distinct curves
-      switch(ch) {
-        case 'TV':
-          maxROI = 1.8;
-          concavity = 0.65;
-          break;
-        case 'Radio':
-          maxROI = 2.1;
-          concavity = 0.7;
-          break;
-        case 'Print':
-          maxROI = 1.6;
-          concavity = 0.55;
-          break;
-        case 'Digital':
-          maxROI = 2.2;
-          concavity = 0.60;
-          break;
-        case 'CRM':
-          maxROI = 2.5;
-          concavity = 0.75;
-          break;
-        case 'Promo':
-          maxROI = 1.9;
-          concavity = 0.68;
-          break;
-        default:
-          maxROI = 2.0;
-          concavity = 0.65;
+      if (investment <= 0) {
+        result[ch] = 0;
+        return;
       }
       
-      // Concave function with diminishing returns: y = a * x^b where b < 1
-      // Higher concavity = stronger diminishing returns
-      if (investment > 0) {
-        // Scale factor to create appropriate magnitude
-        const scale = mediaType === 'Online' ? 1.2 : 1.0;
+      // Get channel-specific parameters or use defaults
+      const params = channelParams[ch] || channelParams['TV'];
+      const { maxContribution, responseSpeed, dropPoint, dropRate } = params;
+      
+      // Normalize investment as a fraction of baseInvestment
+      const x = investment / baseInvestment;
+      
+      // Calculate saturation level based on maximum contribution
+      const a = maxContribution * baseInvestment; 
+      const b = responseSpeed / baseInvestment;
+      
+      // Apply traditional MMM response formula: a * (1 - e^(-b*Spend))
+      let contribution = a * (1 - Math.exp(-b * investment));
+      
+      // For high spend levels (after dropPoint), apply a smooth decline
+      if (x > dropPoint) {
+        // Get the value and slope at the dropPoint
+        const dropValue = a * (1 - Math.exp(-b * dropPoint * baseInvestment));
+        const dropSlope = a * b * Math.exp(-b * dropPoint * baseInvestment);
         
-        // Simple power function for concave curve with diminishing returns
-        result[ch] = scale * maxROI * investment * Math.pow(investment / baseInvestment, -concavity);
+        // Calculate how far we are into the dropping phase
+        const dropPhaseProgress = (x - dropPoint) / (1 - dropPoint);
         
-        // Cap the output to reasonable values closer to the break-even line
-        const cappedValue = Math.min(result[ch], investment * 3);
-        result[ch] = cappedValue;
-      } else {
-        result[ch] = 0;
+        // Calculate the terminal value (where we end up at max investment)
+        // This gives ROI < 1 for max investment (0.7x ROI at maximum)
+        const terminalValue = baseInvestment * 0.7;
+        
+        // Smooth transition: use a blend of:
+        // 1. A line tangent to the curve at dropPoint
+        // 2. A decay function toward the terminal value
+        
+        // Tangent line: value + slope * (x - dropPoint)
+        const tangentValue = dropValue + dropSlope * baseInvestment * (x - dropPoint);
+        
+        // Decay function: exponential blend toward terminal value
+        const decayFactor = Math.pow(dropPhaseProgress, dropRate);
+        
+        // Blend between tangent line and terminal value based on decay factor
+        contribution = tangentValue * (1 - decayFactor) + terminalValue * decayFactor;
+      }
+      
+      // Apply a very slight random variation (±1%) for realism
+      const variation = 1 + (Math.random() * 0.02 - 0.01);
+      result[ch] = contribution * variation;
+      
+      // Apply base channel efficiency from definitions for additional distinction
+      const { baseEfficiency } = channelDefinitions[ch as keyof typeof channelDefinitions];
+      const efficiencyFactor = baseEfficiency / 2.5; // Normalize efficiency
+      result[ch] *= (0.8 + 0.4 * efficiencyFactor); // Less pronounced but still varied
+      
+      // Ensure ROI never exceeds 3.0 at any point
+      const maxAllowedValue = investment * 3.0;
+      if (result[ch] > maxAllowedValue) {
+        result[ch] = maxAllowedValue;
       }
     });
     
@@ -94,42 +147,51 @@ const generateCurveData = (channel: string, showAll: boolean = false) => {
 
 // Calculate optimal range for a specific channel - now before diminishing returns become too strong
 const calculateOptimalRange = (data: any[], channel: string) => {
-  // Calculate ROI at each point
-  const roiData = data.map(point => ({
-    investment: point.investment,
-    value: point[channel],
-    roi: point[channel] / point.investment
-  })).filter(point => !isNaN(point.roi) && isFinite(point.roi) && point.investment > 10000);
+  // Calculate ROI and marginal returns at each point
+  const roiData = data.map((point, i, arr) => {
+    const roi = point[channel] / point.investment;
+    
+    // Calculate marginal ROI (derivative)
+    let marginalRoi = 0;
+    if (i > 0) {
+      const prevPoint = arr[i-1];
+      const responseChange = point[channel] - prevPoint[channel];
+      const investmentChange = point.investment - prevPoint.investment;
+      marginalRoi = responseChange / investmentChange;
+    }
+    
+    return {
+      investment: point.investment,
+      value: point[channel],
+      roi,
+      marginalRoi
+    };
+  }).filter(point => !isNaN(point.roi) && isFinite(point.roi) && point.investment > 5000);
   
-  // Find maximum ROI point
+  // Find the peak ROI (often at the beginning before diminishing returns)
   const maxRoi = Math.max(...roiData.map(p => p.roi));
   const peakRoiPoint = roiData.find(p => p.roi === maxRoi);
   
-  // The optimal zone starts where ROI reaches 85% of the peak
-  const startIndex = roiData.findIndex(p => p.roi >= maxRoi * 0.85);
-  const startPoint = startIndex !== -1 ? roiData[startIndex] : null;
-  
-  // Find the point where the marginal ROI starts diminishing significantly
-  // (where the derivative of ROI drops below a threshold)
-  const roiDerivatives = [];
-  for (let i = 1; i < roiData.length; i++) {
-    const roiChange = roiData[i].roi - roiData[i-1].roi;
-    const investmentChange = roiData[i].investment - roiData[i-1].investment;
-    roiDerivatives.push(roiChange / investmentChange);
-  }
-  
-  // Find where the second derivative becomes strongly negative (curve flattens)
-  // This indicates where diminishing returns kick in strongly
-  const endIndex = roiDerivatives.findIndex((derivative, i) => 
-    i > startIndex && derivative < -0.00001 && roiData[i].roi < maxRoi * 0.9
+  // Find the start of the optimal zone - after initial instability, where ROI stabilizes at a strong value
+  // Increase the threshold to make the optimal zone start higher (smaller zone)
+  const startPoint = roiData.find(p => 
+    p.investment > 40000 && // Increased from 20000 to 40000
+    p.roi > maxRoi * 0.7 && // Reduced from 0.8 to 0.7 to compensate
+    p.marginalRoi > 1.2 // Increased from 1.0 to 1.2 for stricter criteria
   );
   
-  const endPoint = endIndex !== -1 ? roiData[endIndex] : null;
+  // Find the end of the optimal zone - where marginal ROI drops below 1.0
+  // This means each additional euro invested returns less than 1 euro (diminishing returns)
+  const endPointIndex = roiData.findIndex(p => 
+    p.investment > (startPoint?.investment || 40000) && // Updated from 20000 to 40000
+    p.marginalRoi < 1.1
+  );
   
-  // Create a narrower optimal zone
+  const endPoint = endPointIndex !== -1 ? roiData[endPointIndex] : null;
+  
   return {
-    min: startPoint?.investment || 25000,
-    max: (endPoint?.investment || 100000) * 0.8 // Make optimal zone end earlier
+    min: startPoint?.investment || 40000, // Updated from 20000 to 40000
+    max: endPoint?.investment || 120000
   };
 };
 
@@ -260,20 +322,39 @@ const ResponseCurvesTab: React.FC<ResponseCurvesTabProps> = ({ filters }) => {
               {/* Single channel view - show optimal zone and current investment */}
               {!showAllCurves && (
                 <>
+                  {/* Optimal investment zone with improved visualization */}
                   <ReferenceArea
                     x1={optimalRange.min}
                     x2={optimalRange.max}
                     fill="#22c55e" 
-                    fillOpacity={0.1}
+                    fillOpacity={0.15}
                     stroke="#22c55e"
+                    strokeWidth={1.5}
                     strokeDasharray="3 3"
-                    label={{ 
-                      value: 'Optimal Investment Zone', 
-                      position: 'insideTopLeft', 
+                  />
+                  
+                  {/* Add zone labels */}
+                  <ReferenceLine
+                    x={optimalRange.min}
+                    stroke="#22c55e"
+                    strokeWidth={2}
+                    label={{
+                      value: 'Optimal Zone Start', 
+                      position: 'top', 
                       fill: '#14532d',
-                      fontSize: 12,
-                      dy: 15,
-                      dx: 5
+                      fontSize: 12
+                    }}
+                  />
+                  
+                  <ReferenceLine
+                    x={optimalRange.max}
+                    stroke="#f97316" // Orange color for diminishing returns
+                    strokeWidth={2}
+                    label={{
+                      value: 'Diminishing Returns', 
+                      position: 'top', 
+                      fill: '#9a3412',
+                      fontSize: 12
                     }}
                   />
                   
@@ -282,7 +363,7 @@ const ResponseCurvesTab: React.FC<ResponseCurvesTabProps> = ({ filters }) => {
                     stroke="#3b82f6"
                     strokeWidth={2}
                     label={{
-                      value: 'Current', 
+                      value: 'Current Investment', 
                       position: 'top', 
                       fill: '#1e40af',
                       fontSize: 12
@@ -316,8 +397,9 @@ const ResponseCurvesTab: React.FC<ResponseCurvesTabProps> = ({ filters }) => {
                         x1={chanOptimalRange.min}
                         x2={chanOptimalRange.max}
                         fill={color} 
-                        fillOpacity={0.1}
+                        fillOpacity={0.15}
                         stroke={color}
+                        strokeWidth={1}
                         strokeDasharray="3 3"
                         label={{ 
                           value: `${channel} Optimal`, 
@@ -363,23 +445,34 @@ const ResponseCurvesTab: React.FC<ResponseCurvesTabProps> = ({ filters }) => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="card bg-slate-50 border border-slate-200">
           <h3 className="text-lg font-medium mb-3">Optimal Investment Range</h3>
+          <p className="text-slate-700 mb-2">
+            For <span className="font-semibold">{selectedChannel}</span>, optimal ROI is achieved between {formatCurrency(optimalRange.min)} and {formatCurrency(optimalRange.max)}.
+          </p>
           <p className="text-slate-700">
-            For {selectedChannel}, optimal ROI is achieved between {formatCurrency(optimalRange.min)} and {formatCurrency(optimalRange.max)} investment. Current investment is {formatCurrency(currentInvestment[selectedChannel])}, which is {currentInvestment[selectedChannel] >= optimalRange.min && currentInvestment[selectedChannel] <= optimalRange.max ? 'within' : 'outside'} the optimal range.
+            Current investment is {formatCurrency(currentInvestment[selectedChannel])}, which is <span className={currentInvestment[selectedChannel] >= optimalRange.min && currentInvestment[selectedChannel] <= optimalRange.max ? 'text-success-700 font-medium' : 'text-error-700 font-medium'}>
+              {currentInvestment[selectedChannel] >= optimalRange.min && currentInvestment[selectedChannel] <= optimalRange.max ? 'within the optimal range' : 'outside the optimal range'}
+            </span>.
           </p>
         </div>
         
         <div className="card bg-slate-50 border border-slate-200">
-          <h3 className="text-lg font-medium mb-3">ROI Analysis</h3>
+          <h3 className="text-lg font-medium mb-3">Diminishing Returns Analysis</h3>
+          <p className="text-slate-700 mb-2">
+            {currentInvestment[selectedChannel] < optimalRange.min ? 
+              `${selectedChannel} is currently underinvested. Increasing investment to at least ${formatCurrency(optimalRange.min)} would significantly improve ROI and contribution.` :
+              currentInvestment[selectedChannel] > optimalRange.max ? 
+              `${selectedChannel} is experiencing diminishing returns. Each additional euro invested yields progressively less return.` :
+              `${selectedChannel} is well-optimized. Current investment provides good balance between volume and efficiency.`
+            }
+          </p>
           <p className="text-slate-700">
-            {selectedChannel} shows {
-              currentInvestment[selectedChannel] < optimalRange.min ? 'strong potential for additional investment' :
-              currentInvestment[selectedChannel] > optimalRange.max ? 'diminishing returns at current investment level' :
-              'good efficiency at current investment level'
-            }. Consider {
-              currentInvestment[selectedChannel] > optimalRange.max ? 'reducing' : 
-              currentInvestment[selectedChannel] < optimalRange.min ? 'increasing' : 
-              'maintaining'
-            } investment to maximize ROI.
+            <span className="font-medium">Recommendation:</span> {
+              currentInvestment[selectedChannel] < optimalRange.min 
+                ? `Increase investment by ${formatCurrency(optimalRange.min - currentInvestment[selectedChannel])} (+${Math.round(((optimalRange.min / currentInvestment[selectedChannel]) - 1) * 100)}%) to reach optimal efficiency.` : 
+              currentInvestment[selectedChannel] > optimalRange.max 
+                ? `Consider reallocating ${formatCurrency(currentInvestment[selectedChannel] - optimalRange.max)} (${Math.round(((currentInvestment[selectedChannel] / optimalRange.max) - 1) * 100)}% of current budget) to other channels with better ROI.` : 
+              `Maintain current investment levels to maximize returns.`
+            }
           </p>
         </div>
       </div>
