@@ -12,6 +12,16 @@ import {
 } from 'recharts';
 import { ArrowUp, ArrowDown, Minus } from 'lucide-react';
 
+// Add interface for custom colors
+interface OptimizationImpactProps {
+  chartColors?: {
+    currentAllocation: string;
+    optimizedAllocation: string;
+    currentRevenue: string;
+    optimizedRevenue: string;
+  }
+}
+
 // Mock data for optimization impact
 const optimizationData = [
   {
@@ -84,7 +94,15 @@ const formatPercentage = (value: number) => {
   return `${value.toFixed(1)}%`;
 };
 
-const OptimizationImpact: React.FC = () => {
+const OptimizationImpact: React.FC<OptimizationImpactProps> = ({ chartColors }) => {
+  // Default colors if custom colors aren't provided
+  const colors = chartColors || {
+    currentAllocation: "#8B5CF6", // Purple
+    optimizedAllocation: "#22C55E", // Green
+    currentRevenue: "#C4B5FD", // Lavender
+    optimizedRevenue: "#3B82F6"  // Blue
+  };
+
   return (
     <div className="space-y-6">
       {/* 1. Optimization Impact Chart */}
@@ -144,24 +162,24 @@ const OptimizationImpact: React.FC = () => {
               />
               <Legend 
                 payload={[
-                  { value: 'Current Allocation (%)', type: 'rect', color: '#8B5CF6' }, // Purple
-                  { value: 'Optimized Allocation (%)', type: 'rect', color: '#22C55E' }, // Green
-                  { value: 'Current Revenue (€K)', type: 'rect', color: '#C4B5FD' }, // Lavender
-                  { value: 'Optimized Revenue (€K)', type: 'rect', color: '#3B82F6' }  // Blue
+                  { value: 'Current Allocation (%)', type: 'rect', color: colors.currentAllocation },
+                  { value: 'Optimized Allocation (%)', type: 'rect', color: colors.optimizedAllocation },
+                  { value: 'Current Revenue (€K)', type: 'rect', color: colors.currentRevenue },
+                  { value: 'Optimized Revenue (€K)', type: 'rect', color: colors.optimizedRevenue }
                 ]}
               />
               {/* Allocation bars (%) - Left Y-axis */}
               <Bar 
                 yAxisId="left" 
                 dataKey="currentAllocation" 
-                fill="#8B5CF6" // Purple
+                fill={colors.currentAllocation}
                 name="Current Allocation (%)"
                 radius={[4, 4, 0, 0]}
               />
               <Bar 
                 yAxisId="left" 
                 dataKey="optimizedAllocation" 
-                fill="#22C55E" // Green
+                fill={colors.optimizedAllocation}
                 name="Optimized Allocation (%)"
                 radius={[4, 4, 0, 0]}
               />
@@ -170,14 +188,14 @@ const OptimizationImpact: React.FC = () => {
               <Bar 
                 yAxisId="right" 
                 dataKey="currentRevenue" 
-                fill="#C4B5FD" // Lavender
+                fill={colors.currentRevenue}
                 name="Current Revenue (€K)"
                 radius={[4, 4, 0, 0]}
               />
               <Bar 
                 yAxisId="right" 
                 dataKey="optimizedRevenue" 
-                fill="#3B82F6" // Blue
+                fill={colors.optimizedRevenue}
                 name="Optimized Revenue (€K)"
                 radius={[4, 4, 0, 0]}
               />

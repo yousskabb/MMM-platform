@@ -63,7 +63,7 @@ const ChatTab: React.FC<ChatTabProps> = ({ filters }) => {
     
     // Simulate AI processing time
     setTimeout(() => {
-      const answer = generateChatAnswer(userMessage.content);
+      const answer = generateChatAnswer(userMessage.content, filters.country, filters.brand);
       
       const assistantMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),

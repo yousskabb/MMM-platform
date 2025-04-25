@@ -222,7 +222,23 @@ export const generateSimulationData = (): SimulationData[] => {
 export const preGeneratedData = {
   channelData: generateChannelData(),
   monthlyData: generateMonthlyData(),
-  synergyData: generateSynergyData(),
+  synergyData: generateSynergyData().map(item => {
+    // Set specific synergy values as per requirements
+    if ((item.channel1 === 'Print' && item.channel2 === 'Radio') || 
+        (item.channel1 === 'Radio' && item.channel2 === 'Print')) {
+      return {...item, correlation: -0.06};
+    }
+    if ((item.channel1 === 'Digital' && item.channel2 === 'Radio') || 
+        (item.channel1 === 'Radio' && item.channel2 === 'Digital')) {
+      return {...item, correlation: 0.49};
+    }
+    // Add a specific value for Promo + Digital
+    if ((item.channel1 === 'Promo' && item.channel2 === 'Digital') || 
+        (item.channel1 === 'Digital' && item.channel2 === 'Promo')) {
+      return {...item, correlation: 0.46};
+    }
+    return item;
+  }),
   yearComparisonData: generateYearComparisonData('2023', '2024'),
   simulationData: generateSimulationData()
 };
@@ -230,6 +246,56 @@ export const preGeneratedData = {
 // Helper function to filter data by country, brand, etc.
 // Generate data variation based on country and brand
 export const filterData = (country: string, brand: string, dateRange: any) => {
+  // If both 'All Countries' and 'All Brands' are selected, use special handling
+  if (country === 'All Countries' && brand === 'All Brands') {
+    // Create an aggregate of all countries and all brands
+    const allCountries = ['France', 'UK', 'Spain', 'Italy', 'Germany', 'Portugal'];
+    const allBrands = ['Novotel', 'Pullman', 'Ibis', 'Mercure', 'Sofitel'];
+    
+    // Generate individual data for each country/brand combination
+    const combinedData = allCountries.flatMap(countryItem => 
+      allBrands.map(brandItem => {
+        // Get data for this specific country/brand combination
+        return getDataForCountryAndBrand(countryItem, brandItem);
+      })
+    );
+    
+    // Aggregate the channel data by summing and averaging
+    return aggregateData(combinedData);
+  }
+  
+  // If only 'All Countries' is selected
+  if (country === 'All Countries') {
+    const allCountries = ['France', 'UK', 'Spain', 'Italy', 'Germany', 'Portugal'];
+    
+    // Generate data for each country with the selected brand
+    const combinedData = allCountries.map(countryItem => {
+      return getDataForCountryAndBrand(countryItem, brand);
+    });
+    
+    // Aggregate the data
+    return aggregateData(combinedData);
+  }
+  
+  // If only 'All Brands' is selected
+  if (brand === 'All Brands') {
+    const allBrands = ['Novotel', 'Pullman', 'Ibis', 'Mercure', 'Sofitel'];
+    
+    // Generate data for each brand with the selected country
+    const combinedData = allBrands.map(brandItem => {
+      return getDataForCountryAndBrand(country, brandItem);
+    });
+    
+    // Aggregate the data
+    return aggregateData(combinedData);
+  }
+  
+  // Otherwise, just return the data for the specific country and brand
+  return getDataForCountryAndBrand(country, brand);
+};
+
+// Function to get data for a specific country and brand
+const getDataForCountryAndBrand = (country: string, brand: string) => {
   // Generate multipliers based on country and brand to create more variety
   let countryMultiplier = 1.0;
   switch(country) {
@@ -294,10 +360,134 @@ export const filterData = (country: string, brand: string, dateRange: any) => {
   };
 };
 
+// Function to aggregate data from multiple country/brand combinations
+const aggregateData = (dataArray: any[]) => {
+  if (dataArray.length === 0) return getDataForCountryAndBrand('France', 'Novotel'); // Fallback
+  
+  // Get channel and month lists (they are the same across all data sets)
+  const channels = Object.keys(channelDefinitions) as Channel[];
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  
+  // Aggregate channelData
+  const aggregatedChannelData = channels.map(channel => {
+    // Extract all data for this channel from all combinations
+    const channelItems = dataArray.map(data => 
+      data.channelData.find((item: any) => item.channel === channel)
+    );
+    
+    // Calculate total/avg values
+    const totalInvestment = channelItems.reduce((sum, item) => sum + item.investment, 0);
+    const totalRevenue = channelItems.reduce((sum, item) => sum + item.revenue, 0);
+    const totalContribution = channelItems.reduce((sum, item) => sum + item.contribution, 0);
+    // ROI is calculated as average since it's a ratio
+    const avgROI = totalRevenue / totalInvestment;
+    // Use average for YoY growth
+    const avgYoyGrowth = channelItems.reduce((sum, item) => sum + item.yoyGrowth, 0) / channelItems.length;
+    
+    // Get other properties from the first item (they're the same)
+    const { mediaType, color, lightColor } = channelItems[0];
+    
+    return {
+      channel,
+      mediaType,
+      color,
+      lightColor,
+      investment: totalInvestment,
+      revenue: totalRevenue,
+      roi: avgROI,
+      contribution: totalContribution,
+      yoyGrowth: avgYoyGrowth
+    };
+  });
+  
+  // Aggregate monthlyData
+  const aggregatedMonthlyData = channels.flatMap(channel => {
+    return months.map(month => {
+      // Get all monthly data for this channel and month
+      const monthlyItems = dataArray.flatMap(data => 
+        data.monthlyData.filter((item: any) => item.channel === channel && item.month === month)
+      );
+      
+      // Calculate totals/averages
+      const totalInvestment = monthlyItems.reduce((sum, item) => sum + item.investment, 0);
+      const totalRevenue = monthlyItems.reduce((sum, item) => sum + item.revenue, 0);
+      const totalContribution = monthlyItems.reduce((sum, item) => sum + item.contribution, 0);
+      const avgValue = monthlyItems.reduce((sum, item) => sum + item.value, 0) / monthlyItems.length;
+      const avgYoyGrowth = monthlyItems.reduce((sum, item) => sum + item.yoyGrowth, 0) / monthlyItems.length;
+      
+      // Get other properties from the first item
+      const { mediaType, color, lightColor } = monthlyItems[0];
+      
+      return {
+        channel,
+        month,
+        mediaType,
+        color, 
+        lightColor,
+        value: avgValue,
+        investment: totalInvestment,
+        roi: totalRevenue / totalInvestment,
+        revenue: totalRevenue,
+        contribution: totalContribution,
+        yoyGrowth: avgYoyGrowth
+      };
+    });
+  });
+  
+  // Aggregate yearComparisonData
+  const aggregatedYearData = channels.map(channel => {
+    // Get all year data for this channel
+    const yearItems = dataArray.map(data => 
+      data.yearComparisonData.find((item: any) => item.channel === channel)
+    );
+    
+    // Calculate totals
+    const totalYear1Budget = yearItems.reduce((sum, item) => sum + item.year1Budget, 0);
+    const totalYear2Budget = yearItems.reduce((sum, item) => sum + item.year2Budget, 0);
+    const variation = ((totalYear2Budget - totalYear1Budget) / totalYear1Budget) * 100;
+    
+    return {
+      channel,
+      year1Budget: totalYear1Budget,
+      year2Budget: totalYear2Budget,
+      variation
+    };
+  });
+  
+  // Aggregate simulationData (similar approach)
+  const aggregatedSimulationData = channels.map(channel => {
+    // Get all simulation data for this channel
+    const simItems = dataArray.map(data => 
+      data.simulationData.find((item: any) => item.channel === channel)
+    );
+    
+    // Calculate totals/averages
+    const totalCurrentBudget = simItems.reduce((sum, item) => sum + item.currentBudget, 0);
+    const totalNewBudget = simItems.reduce((sum, item) => sum + item.newBudget, 0);
+    const avgExpectedROI = simItems.reduce((sum, item) => sum + item.expectedROI, 0) / simItems.length;
+    
+    return {
+      channel,
+      currentBudget: totalCurrentBudget,
+      newBudget: totalNewBudget,
+      expectedROI: avgExpectedROI
+    };
+  });
+  
+  // Return the aggregated data structure
+  return {
+    channelData: aggregatedChannelData,
+    monthlyData: aggregatedMonthlyData,
+    synergyData: dataArray[0].synergyData, // Synergy data doesn't change with country/brand
+    yearComparisonData: aggregatedYearData,
+    simulationData: aggregatedSimulationData
+  };
+};
+
 // Generate insights based on the data
 export const generateInsights = (country: string, brand: string): string[] => {
-  const channelData = preGeneratedData.channelData;
-  const synergyData = preGeneratedData.synergyData;
+  // Get appropriate data based on selected filters
+  const { channelData, synergyData } = filterData(country, brand, null);
   
   // Find the channel with the highest ROI
   const highestROIChannel = [...channelData].sort((a, b) => b.roi - a.roi)[0];
@@ -321,9 +511,13 @@ export const generateInsights = (country: string, brand: string): string[] => {
   const onlineROI = onlineTotalRevenue / onlineTotalInvestment;
   const offlineROI = offlineTotalRevenue / offlineTotalInvestment;
   
+  // Format text appropriately for All Countries/Brands
+  const countryText = country === 'All Countries' ? 'all countries' : country;
+  const brandText = brand === 'All Brands' ? 'all brands' : brand;
+  
   // Generate insights
   return [
-    `For ${brand} in ${country}, ${highestROIChannel.channel} delivers the highest ROI at ${highestROIChannel.roi.toFixed(2)}, which is ${((highestROIChannel.roi / lowestROIChannel.roi - 1) * 100).toFixed(0)}% higher than ${lowestROIChannel.channel}.`,
+    `For ${brandText} in ${countryText}, ${highestROIChannel.channel} delivers the highest ROI at ${highestROIChannel.roi.toFixed(2)}, which is ${((highestROIChannel.roi / lowestROIChannel.roi - 1) * 100).toFixed(0)}% higher than ${lowestROIChannel.channel}.`,
     
     `Strong synergy detected between ${strongestSynergy.channel1} and ${strongestSynergy.channel2} (correlation: ${strongestSynergy.correlation.toFixed(2)}). Consider coordinating these campaigns for maximum impact.`,
     
@@ -336,31 +530,36 @@ export const generateInsights = (country: string, brand: string): string[] => {
 };
 
 // Generate answers to chat questions
-export const generateChatAnswer = (question: string): string => {
-  const channelData = preGeneratedData.channelData;
+export const generateChatAnswer = (question: string, country: string = 'All Countries', brand: string = 'All Brands'): string => {
+  // Get appropriate data based on selected filters
+  const { channelData } = filterData(country, brand, null);
+  
+  // Format text appropriately for All Countries/Brands
+  const countryText = country === 'All Countries' ? 'all countries' : country;
+  const brandText = brand === 'All Brands' ? 'all brands' : brand;
   
   // Simple pattern matching for demo purposes
   if (question.toLowerCase().includes('best roi') || question.toLowerCase().includes('highest roi')) {
     const highestROIChannel = [...channelData].sort((a, b) => b.roi - a.roi)[0];
-    return `Based on the data, ${highestROIChannel.channel} delivers the best ROI at ${highestROIChannel.roi.toFixed(2)}x. For every $1 invested, you get $${highestROIChannel.roi.toFixed(2)} in return.`;
+    return `Based on the data for ${brandText} in ${countryText}, ${highestROIChannel.channel} delivers the best ROI at ${highestROIChannel.roi.toFixed(2)}x. For every $1 invested, you get $${highestROIChannel.roi.toFixed(2)} in return.`;
   }
   
   if (question.toLowerCase().includes('worst') || question.toLowerCase().includes('least efficient')) {
     const lowestROIChannel = [...channelData].sort((a, b) => a.roi - b.roi)[0];
-    return `The least efficient channel is ${lowestROIChannel.channel} with an ROI of ${lowestROIChannel.roi.toFixed(2)}x. This is ${((channelData[0].roi / lowestROIChannel.roi - 1) * 100).toFixed(0)}% lower than the average ROI across all channels.`;
+    return `The least efficient channel for ${brandText} in ${countryText} is ${lowestROIChannel.channel} with an ROI of ${lowestROIChannel.roi.toFixed(2)}x. This is ${((channelData[0].roi / lowestROIChannel.roi - 1) * 100).toFixed(0)}% lower than the average ROI across all channels.`;
   }
   
   if (question.toLowerCase().includes('budget') || question.toLowerCase().includes('spend')) {
     const totalInvestment = channelData.reduce((sum, c) => sum + c.investment, 0);
     const highestInvestmentChannel = [...channelData].sort((a, b) => b.investment - a.investment)[0];
-    return `The total media investment is $${(totalInvestment/1000000).toFixed(2)} million. The highest investment is in ${highestInvestmentChannel.channel} at $${(highestInvestmentChannel.investment/1000000).toFixed(2)} million (${((highestInvestmentChannel.investment / totalInvestment) * 100).toFixed(0)}% of total budget).`;
+    return `For ${brandText} in ${countryText}, the total media investment is $${(totalInvestment/1000000).toFixed(2)} million. The highest investment is in ${highestInvestmentChannel.channel} at $${(highestInvestmentChannel.investment/1000000).toFixed(2)} million (${((highestInvestmentChannel.investment / totalInvestment) * 100).toFixed(0)}% of total budget).`;
   }
   
   if (question.toLowerCase().includes('recommend') || question.toLowerCase().includes('suggest') || question.toLowerCase().includes('advice')) {
     const channelsByROI = [...channelData].sort((a, b) => b.roi - a.roi);
-    return `Based on ROI performance, I recommend increasing investment in ${channelsByROI[0].channel} and ${channelsByROI[1].channel}, which have the highest returns at ${channelsByROI[0].roi.toFixed(2)}x and ${channelsByROI[1].roi.toFixed(2)}x respectively. Consider reducing spend on ${channelsByROI[channelsByROI.length-1].channel} which has the lowest ROI at ${channelsByROI[channelsByROI.length-1].roi.toFixed(2)}x.`;
+    return `Based on ROI performance for ${brandText} in ${countryText}, I recommend increasing investment in ${channelsByROI[0].channel} and ${channelsByROI[1].channel}, which have the highest returns at ${channelsByROI[0].roi.toFixed(2)}x and ${channelsByROI[1].roi.toFixed(2)}x respectively. Consider reducing spend on ${channelsByROI[channelsByROI.length-1].channel} which has the lowest ROI at ${channelsByROI[channelsByROI.length-1].roi.toFixed(2)}x.`;
   }
   
   // Default response for other questions
-  return `I don't have specific information about that. Try asking about ROI, budget allocation, or recommendations for media investment.`;
+  return `I don't have specific information about that for ${brandText} in ${countryText}. Try asking about ROI, budget allocation, or recommendations for media investment.`;
 };

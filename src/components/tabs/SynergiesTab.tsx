@@ -42,6 +42,21 @@ const SynergiesTab: React.FC<SynergiesTabProps> = ({ filters }) => {
     .sort((a, b) => b.correlation - a.correlation)
     .slice(0, 3);
   
+  // Ensure Promo + Digital has custom text
+  const positiveCorrelationsWithCustomText = positiveCorrelations.map(synergy => {
+    if ((synergy.channel1 === 'Promo' && synergy.channel2 === 'Digital') || 
+        (synergy.channel1 === 'Digital' && synergy.channel2 === 'Promo')) {
+      return {
+        ...synergy,
+        customText: "Promo increases the effectiveness of Digital campaigns. Consider coordinating these channels in your mix"
+      };
+    }
+    return {
+      ...synergy,
+      customText: `${synergy.channel1} increases the effectiveness of ${synergy.channel2} campaigns. Consider coordinating these channels in your media mix.`
+    };
+  });
+  
   // Find the strongest negative synergies (cannibalization)
   const negativeCorrelations = synergyData
     .filter(item => item.correlation < 0)
@@ -118,7 +133,7 @@ const SynergiesTab: React.FC<SynergiesTabProps> = ({ filters }) => {
           </div>
           
           <div className="space-y-4">
-            {positiveCorrelations.map((synergy, index) => (
+            {positiveCorrelationsWithCustomText.map((synergy, index) => (
               <div key={index} className="border border-slate-100 rounded-md p-3">
                 <div className="flex justify-between mb-2">
                   <div className="flex items-center gap-3">
@@ -133,8 +148,7 @@ const SynergiesTab: React.FC<SynergiesTabProps> = ({ filters }) => {
                   </span>
                 </div>
                 <p className="text-sm text-slate-600">
-                  {synergy.channel1} increases the effectiveness of {synergy.channel2} campaigns. 
-                  Consider coordinating these channels in your media mix.
+                  {synergy.customText}
                 </p>
               </div>
             ))}

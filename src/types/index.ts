@@ -10,9 +10,9 @@ export type Channel =
 
 export type MediaType = 'Offline' | 'Online';
 
-export type Country = 'France' | 'UK' | 'Spain' | 'Italy' | 'Germany' | 'Portugal';
+export type Country = 'France' | 'UK' | 'Spain' | 'Italy' | 'Germany' | 'Portugal' | 'All Countries';
 
-export type Brand = 'Novotel' | 'Pullman' | 'Ibis' | 'Mercure' | 'Sofitel';
+export type Brand = 'Novotel' | 'Pullman' | 'Ibis' | 'Mercure' | 'Sofitel' | 'All Brands';
 
 export type DateRange = {
   startDate: Date;
