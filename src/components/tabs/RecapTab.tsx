@@ -108,15 +108,15 @@ const RecapTab: React.FC<RecapTabProps> = ({ filters }) => {
   const investmentGrowth = 12; // Static for now
   
   const totalRevenue = channelData.reduce((sum, channel) => sum + channel.revenue, 0);
-  const totalSellOut = totalRevenue; // Using revenue as sell-out
+  const avgROI = parseFloat((totalRevenue / totalInvestment).toFixed(1));
+  const totalROI = avgROI;
+  const actionableSellOut = totalInvestment * totalROI;
+  const totalSellOut = actionableSellOut * 1.5; // Making total sellout 50% higher than actionable sellout
   const sellOutGrowth = 8; // Static for now
   
   const totalContribution = channelData.reduce((sum, channel) => sum + channel.contribution, 0);
-  const actionableSellOut = totalContribution; // Using contribution as actionable sell-out
   const actionableGrowth = 15; // Static for now
   
-  const avgROI = parseFloat((totalRevenue / totalInvestment).toFixed(1));
-  const totalROI = avgROI;
   const roiGrowth = 5; // Static for now
   
   // Prepare data for pie chart

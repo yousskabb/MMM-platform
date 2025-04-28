@@ -155,7 +155,9 @@ const ROITab: React.FC<ROITabProps> = ({ filters }) => {
               >
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="name" />
-                <YAxis />
+                <YAxis 
+                  tickFormatter={(value) => `${(value / 1000).toFixed(0)}k €`}
+                />
                 <Tooltip formatter={(value) => formatCurrency(value as number)} />
                 <Legend />
                 <Bar dataKey="investment" name="Investment" fill="#94a3b8" />

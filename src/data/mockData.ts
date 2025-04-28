@@ -68,16 +68,25 @@ export const channelDefinitions: Record<Channel, {
 export const generateChannelData = (): ChannelData[] => {
   const channels = Object.keys(channelDefinitions) as Channel[];
   
-  return channels.map(channel => {
+  // Define base investment ranges for each channel
+  const baseInvestments = {
+    'TV': { min: 1000000, max: 2000000 },      // Higher range for TV
+    'Digital': { min: 800000, max: 1800000 },  // Higher range for Digital
+    'Radio': { min: 200000, max: 400000 },     // Lower range for Radio
+    'Print': { min: 150000, max: 350000 },     // Lower range for Print
+    'CRM': { min: 300000, max: 700000 },       // Medium range for CRM
+    'Promo': { min: 250000, max: 600000 }      // Medium range for Promo
+  };
+  
+  // Generate initial investments
+  const initialData = channels.map(channel => {
     const { mediaType, color, lightColor } = channelDefinitions[channel];
+    const range = baseInvestments[channel];
+    const investment = randomNumber(range.min, range.max);
     
     // Different ROI ranges for online vs offline
     const roiBase = mediaType === 'Online' ? 2.5 : 1.5;
     const roi = randomNumber(roiBase, roiBase + 1.5);
-    
-    // Different investment ranges
-    const investmentBase = mediaType === 'Online' ? 500000 : 1000000;
-    const investment = randomNumber(investmentBase, investmentBase * 2);
     
     const revenue = investment * roi;
     const contribution = revenue * randomNumber(0.2, 0.4);
@@ -94,6 +103,37 @@ export const generateChannelData = (): ChannelData[] => {
       contribution,
       yoyGrowth
     };
+  });
+  
+  // Calculate total investment
+  const totalInvestment = initialData.reduce((sum, channel) => sum + channel.investment, 0);
+  
+  // Adjust investments to meet the required proportions
+  return initialData.map(channel => {
+    const percentage = (channel.investment / totalInvestment) * 100;
+    
+    // Ensure Radio and Print never exceed 15%
+    if ((channel.channel === 'Radio' || channel.channel === 'Print') && percentage > 15) {
+      const adjustment = (percentage - 15) / percentage;
+      channel.investment *= (1 - adjustment);
+    }
+    
+    // Ensure Digital is higher than Print and Radio
+    if (channel.channel === 'Digital') {
+      const printInvestment = initialData.find(c => c.channel === 'Print')?.investment || 0;
+      const radioInvestment = initialData.find(c => c.channel === 'Radio')?.investment || 0;
+      const minDigitalInvestment = Math.max(printInvestment, radioInvestment) * 1.2; // 20% higher
+      
+      if (channel.investment < minDigitalInvestment) {
+        channel.investment = minDigitalInvestment;
+      }
+    }
+    
+    // Recalculate derived values
+    channel.revenue = channel.investment * channel.roi;
+    channel.contribution = channel.revenue * randomNumber(0.2, 0.4);
+    
+    return channel;
   });
 };
 
