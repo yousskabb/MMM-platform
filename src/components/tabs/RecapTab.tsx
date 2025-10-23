@@ -143,6 +143,26 @@ const RecapTab: React.FC<RecapTabProps> = ({ filters }) => {
     color: channel.color
   }));
 
+  // Get real weekly contribution data from Excel
+  const { contributions } = filterData(filters.dateRange.startDate, filters.dateRange.endDate);
+
+  // Prepare weekly contribution data for chart
+  const weeklyContributionData = contributions.map(week => {
+    const chartData: any = {
+      date: week.date.toISOString().split('T')[0], // Format as YYYY-MM-DD
+      formattedDate: week.date.toLocaleDateString(), // For display
+      base: week.base,
+      sales: week.sales
+    };
+
+    // Add each variable's contribution
+    channelData.forEach(channel => {
+      chartData[channel.channel] = week[channel.channel] as number;
+    });
+
+    return chartData;
+  });
+
   // Calculate online and offline media totals
   const onlineChannels = channelData.filter(channel => channel.mediaType === 'Online');
   const offlineChannels = channelData.filter(channel => channel.mediaType === 'Offline');
@@ -560,39 +580,44 @@ const RecapTab: React.FC<RecapTabProps> = ({ filters }) => {
         </div>
       </div>
 
-      {/* 3. Contribution Composition (Stacked Area Chart) */}
+      {/* 3. Weekly Contribution Chart */}
       <div className="card">
         <h3 className="text-lg font-medium mb-4 flex items-center gap-2">
           <LineChartIcon size={18} className="text-primary-600" />
-          Contribution Composition
+          Weekly Contribution Trends
         </h3>
-        <div className="h-64">
+        <div className="h-80">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart
-              data={areaChartData}
+              data={weeklyContributionData}
               margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
             >
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis
-                dataKey="month"
-                tick={customXAxisTick}
-                interval={0}
+                dataKey="date"
+                tickFormatter={(value) => new Date(value).toLocaleDateString('en-US', { month: 'short' })}
+                interval="preserveStartEnd"
               />
               <YAxis
                 tickFormatter={(value) => `€${(value / 1000).toFixed(0)}K`}
                 tick={{ fontSize: 11 }}
                 width={45}
-                domain={[0, (dataMax: number) => dataMax * 1.1]} // Increase max to show sales line
               />
               <Tooltip
-                formatter={(value) => formatCurrency(value as number)}
-                labelFormatter={(label) => areaChartData.find(d => d.month === label)?.monthLabel || label}
-                itemSorter={(item) => {
-                  // Put base at the bottom of the tooltip
-                  if (item.dataKey === 'base') return -1;
-                  // Put sales at the top
-                  if (item.dataKey === 'sales') return 1;
-                  return 0;
+                formatter={(value, name) => [formatCurrency(value as number), name]}
+                labelFormatter={(label) => {
+                  const date = new Date(label);
+                  return date.toLocaleDateString('en-US', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                  });
+                }}
+                contentStyle={{
+                  backgroundColor: 'white',
+                  border: '1px solid #ccc',
+                  borderRadius: '8px'
                 }}
               />
               <Legend />
@@ -603,44 +628,31 @@ const RecapTab: React.FC<RecapTabProps> = ({ filters }) => {
                 dataKey="base"
                 stackId="1"
                 stroke="#9CA3AF"
-                fill="#E5E7EB"
+                fill="#9CA3AF"
                 name="Base"
               />
 
-              {/* Channel areas stacked on top of base */}
-              {channelData.map(channel => (
+              {/* Add area for each variable */}
+              {channelData.map((channel, index) => (
                 <Area
                   key={channel.channel}
                   type="monotone"
                   dataKey={channel.channel}
                   stackId="1"
                   stroke={channel.color}
-                  fill={channel.lightColor}
+                  fill={channel.color}
+                  name={channel.channel}
                 />
               ))}
 
-              {/* Total contribution line */}
-              <Line
-                type="monotone"
-                dataKey="total"
-                stroke="#000000"
-                strokeWidth={2.5}
-                strokeDasharray="5 3"
-                dot={false}
-                activeDot={{ r: 6 }}
-                name="Total Contribution"
-              />
-
-              {/* Sales line at the top */}
+              {/* Sales line on top */}
               <Line
                 type="monotone"
                 dataKey="sales"
-                stroke="#000000"
+                stroke="#EF4444"
                 strokeWidth={2}
-                strokeDasharray="8 4"
                 dot={false}
-                activeDot={{ r: 5 }}
-                name="Sales"
+                name="Total Sales"
               />
             </AreaChart>
           </ResponsiveContainer>

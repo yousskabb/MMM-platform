@@ -21,6 +21,8 @@ export interface MonthlyChannelData extends ChannelData {
 export interface FilteredData {
     channelData: ChannelData[];
     monthlyData: MonthlyChannelData[];
+    contributions: WeeklyData[];
+    investments: WeeklyData[];
     dateRange: { min: Date; max: Date };
     variables: string[];
 }
@@ -131,6 +133,8 @@ export function filterData(startDate: Date, endDate: Date): FilteredData {
     return {
         channelData,
         monthlyData,
+        contributions: filteredContributions,
+        investments: filteredInvestments,
         dateRange: { min: startDate, max: endDate },
         variables: cachedData.variables
     };
@@ -148,6 +152,35 @@ export function getAvailableDateRange(): { min: Date; max: Date } | null {
  */
 export function getAvailableVariables(): string[] {
     return cachedData?.variables || [];
+}
+
+/**
+ * Get all available dates from Excel data
+ */
+export function getAvailableDates(): Date[] {
+    if (!cachedData) {
+        return [];
+    }
+
+    // Combine dates from both investments and contributions
+    const allDates = new Set<string>();
+
+    cachedData.investments.forEach(row => {
+        if (row.date) {
+            allDates.add(row.date.toISOString().split('T')[0]); // Get YYYY-MM-DD format
+        }
+    });
+
+    cachedData.contributions.forEach(row => {
+        if (row.date) {
+            allDates.add(row.date.toISOString().split('T')[0]); // Get YYYY-MM-DD format
+        }
+    });
+
+    // Convert back to Date objects and sort
+    return Array.from(allDates)
+        .map(dateStr => new Date(dateStr))
+        .sort((a, b) => a.getTime() - b.getTime());
 }
 
 /**

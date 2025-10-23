@@ -10,7 +10,7 @@ import BudgetPlanningTab from '../tabs/BudgetPlanningTab';
 import SimulationsTab from '../tabs/SimulationsTab';
 import ChatTab from '../tabs/ChatTab';
 import ResponseCurvesTab from '../tabs/ResponseCurvesTab';
-import { loadExcelData, getAvailableDateRange, isDataLoaded, isDataLoading } from '../../data/dataService';
+import { loadExcelData, getAvailableDateRange, getAvailableDates, isDataLoaded, isDataLoading } from '../../data/dataService';
 import DebugExcel from '../DebugExcel';
 
 type Tab = 'recap' | 'synergies' | 'roi' | 'budget' | 'simulations' | 'response' | 'chat';
@@ -63,13 +63,13 @@ const Layout: React.FC = () => {
         await loadExcelData();
 
         // Update filters with available date range from Excel
-        const availableRange = getAvailableDateRange();
-        if (availableRange) {
+        const availableDates = getAvailableDates();
+        if (availableDates.length > 0) {
           setFilters(prev => ({
             ...prev,
             dateRange: {
-              startDate: availableRange.min,
-              endDate: availableRange.max
+              startDate: availableDates[0],
+              endDate: availableDates[availableDates.length - 1]
             }
           }));
         }

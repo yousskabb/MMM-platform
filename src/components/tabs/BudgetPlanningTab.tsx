@@ -45,15 +45,14 @@ const BudgetPlanningTab: React.FC<BudgetPlanningTabProps> = ({ filters }) => {
   // Prepare data for chart
   const chartData = yearComparisonData.map(item => {
     // Get the color based on the channel
-    const channelData = filterData(filters.country, filters.brand, filters.dateRange).channelData
-      .find(c => c.channel === item.channel);
+    const channelDataItem = channelData.find(c => c.channel === item.channel);
 
     return {
       name: item.channel,
       [year1]: item.year1Budget,
       [year2]: item.year2Budget,
       variation: Math.round(item.variation), // Round to nearest integer
-      color: channelData?.color || '#94a3b8'
+      color: channelDataItem?.color || '#94a3b8'
     };
   });
 
@@ -159,12 +158,12 @@ const BudgetPlanningTab: React.FC<BudgetPlanningTabProps> = ({ filters }) => {
                   </td>
                   <td className="p-3 text-right">
                     <span className={`px-2 py-1 rounded-full text-sm ${(() => {
-                        // Safely convert to number and check if negative
-                        const value = Number(item.variation);
-                        return !isNaN(value) && value < 0
-                          ? 'bg-error-100 text-error-700'
-                          : 'bg-success-100 text-success-700';
-                      })()
+                      // Safely convert to number and check if negative
+                      const value = Number(item.variation);
+                      return !isNaN(value) && value < 0
+                        ? 'bg-error-100 text-error-700'
+                        : 'bg-success-100 text-success-700';
+                    })()
                       }`}>
                       {Number(item.variation) > 0 ? '+' : ''}{Math.round(Number(item.variation))}%
                     </span>
@@ -180,12 +179,12 @@ const BudgetPlanningTab: React.FC<BudgetPlanningTabProps> = ({ filters }) => {
                 <td className="p-3 text-right">{formatCurrency(totalYear2 - totalYear1)}</td>
                 <td className="p-3 text-right">
                   <span className={`px-2 py-1 rounded-full text-sm ${(() => {
-                      // Safely convert to number and check if negative
-                      const value = Number(totalVariation);
-                      return !isNaN(value) && value < 0
-                        ? 'bg-error-100 text-error-700'
-                        : 'bg-success-100 text-success-700';
-                    })()
+                    // Safely convert to number and check if negative
+                    const value = Number(totalVariation);
+                    return !isNaN(value) && value < 0
+                      ? 'bg-error-100 text-error-700'
+                      : 'bg-success-100 text-success-700';
+                  })()
                     }`}>
                     {Number(totalVariation) > 0 ? '+' : ''}{Math.round(Number(totalVariation))}%
                   </span>

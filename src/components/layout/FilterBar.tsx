@@ -3,6 +3,7 @@ import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { FilterState, Country, Brand } from '../../types';
 import { Filter, Calendar } from 'lucide-react';
+import { getAvailableDates } from '../../data/dataService';
 
 interface FilterBarProps {
   filters: FilterState;
@@ -13,8 +14,13 @@ const countries: Country[] = ['France'];
 const brands: Brand[] = ['Dior'];
 
 const FilterBar: React.FC<FilterBarProps> = ({ filters, onFilterChange }) => {
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const datePickerRef = useRef<HTMLDivElement>(null);
+  const [showStartDatePicker, setShowStartDatePicker] = useState(false);
+  const [showEndDatePicker, setShowEndDatePicker] = useState(false);
+  const startDatePickerRef = useRef<HTMLDivElement>(null);
+  const endDatePickerRef = useRef<HTMLDivElement>(null);
+
+  // Get available dates from Excel data
+  const availableDates = getAvailableDates();
 
   const handleCountryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     onFilterChange({
@@ -30,26 +36,40 @@ const FilterBar: React.FC<FilterBarProps> = ({ filters, onFilterChange }) => {
     });
   };
 
-  const handleDateChange = (dateRange: [Date | null, Date | null]) => {
-    const [start, end] = dateRange;
-    if (start && end) {
+  const handleStartDateChange = (date: Date | null) => {
+    if (date) {
       onFilterChange({
         ...filters,
         dateRange: {
-          startDate: start,
-          endDate: end
+          startDate: date,
+          endDate: filters.dateRange.endDate
         }
       });
-      // Close the date picker after selection
-      setShowDatePicker(false);
+      setShowStartDatePicker(false);
     }
   };
 
-  // Close date picker when clicking outside
+  const handleEndDateChange = (date: Date | null) => {
+    if (date) {
+      onFilterChange({
+        ...filters,
+        dateRange: {
+          startDate: filters.dateRange.startDate,
+          endDate: date
+        }
+      });
+      setShowEndDatePicker(false);
+    }
+  };
+
+  // Close date pickers when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (datePickerRef.current && !datePickerRef.current.contains(event.target as Node)) {
-        setShowDatePicker(false);
+      if (startDatePickerRef.current && !startDatePickerRef.current.contains(event.target as Node)) {
+        setShowStartDatePicker(false);
+      }
+      if (endDatePickerRef.current && !endDatePickerRef.current.contains(event.target as Node)) {
+        setShowEndDatePicker(false);
       }
     };
 
@@ -95,29 +115,55 @@ const FilterBar: React.FC<FilterBarProps> = ({ filters, onFilterChange }) => {
           </select>
         </div>
 
-        <div className="relative" ref={datePickerRef}>
+        {/* Start Date Picker */}
+        <div className="relative" ref={startDatePickerRef}>
           <div className="flex items-center gap-2">
-            <label className="text-sm font-medium text-slate-700">Date Range:</label>
+            <label className="text-sm font-medium text-slate-700">Start Date:</label>
             <button
-              onClick={() => setShowDatePicker(!showDatePicker)}
+              onClick={() => setShowStartDatePicker(!showStartDatePicker)}
               className="flex items-center gap-1 px-3 py-2 text-sm border border-slate-300 rounded-md bg-white hover:bg-slate-50"
             >
               <Calendar size={16} />
-              <span>
-                {filters.dateRange.startDate.toLocaleDateString()} - {filters.dateRange.endDate.toLocaleDateString()}
-              </span>
+              <span>{filters.dateRange.startDate.toLocaleDateString()}</span>
             </button>
           </div>
 
-          {showDatePicker && (
+          {showStartDatePicker && (
             <div className="absolute z-10 mt-1 right-0 bg-white border border-slate-200 rounded-md shadow-dropdown p-2">
               <DatePicker
                 selected={filters.dateRange.startDate}
-                onChange={handleDateChange}
-                startDate={filters.dateRange.startDate}
-                endDate={filters.dateRange.endDate}
-                selectsRange
+                onChange={handleStartDateChange}
+                includeDates={availableDates}
+                maxDate={filters.dateRange.endDate}
                 inline
+                calendarStartDay={1}
+              />
+            </div>
+          )}
+        </div>
+
+        {/* End Date Picker */}
+        <div className="relative" ref={endDatePickerRef}>
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-medium text-slate-700">End Date:</label>
+            <button
+              onClick={() => setShowEndDatePicker(!showEndDatePicker)}
+              className="flex items-center gap-1 px-3 py-2 text-sm border border-slate-300 rounded-md bg-white hover:bg-slate-50"
+            >
+              <Calendar size={16} />
+              <span>{filters.dateRange.endDate.toLocaleDateString()}</span>
+            </button>
+          </div>
+
+          {showEndDatePicker && (
+            <div className="absolute z-10 mt-1 right-0 bg-white border border-slate-200 rounded-md shadow-dropdown p-2">
+              <DatePicker
+                selected={filters.dateRange.endDate}
+                onChange={handleEndDateChange}
+                includeDates={availableDates}
+                minDate={filters.dateRange.startDate}
+                inline
+                calendarStartDay={1}
               />
             </div>
           )}
