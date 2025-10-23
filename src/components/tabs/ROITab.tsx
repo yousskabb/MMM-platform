@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { FilterState, ChannelData } from '../../types';
-import { filterData } from '../../data/mockData';
+import { filterData, isDataLoaded } from '../../data/dataService';
 import DataTable from '../ui/DataTable';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
 import { ArrowUpDown, SlidersHorizontal } from 'lucide-react';
@@ -17,14 +17,23 @@ const ROITab: React.FC<ROITabProps> = ({ filters }) => {
   const [sortField, setSortField] = useState<SortField>('roi');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [showSettings, setShowSettings] = useState(false);
-  
-  const { channelData } = filterData(filters.country, filters.brand, filters.dateRange);
-  
+
+  // Check if data is loaded before trying to use it
+  if (!isDataLoaded()) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-slate-500">Loading data...</p>
+      </div>
+    );
+  }
+
+  const { channelData } = filterData(filters.dateRange.startDate, filters.dateRange.endDate);
+
   // Calculate totals
   const totalInvestment = channelData.reduce((sum, channel) => sum + channel.investment, 0);
   const totalRevenue = channelData.reduce((sum, channel) => sum + channel.revenue, 0);
   const avgROI = totalRevenue / totalInvestment;
-  
+
   // Sort data
   const sortedData = [...channelData].sort((a, b) => {
     if (sortDirection === 'asc') {
@@ -33,7 +42,7 @@ const ROITab: React.FC<ROITabProps> = ({ filters }) => {
       return a[sortField] < b[sortField] ? 1 : -1;
     }
   });
-  
+
   // Format currency
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-EU', {
@@ -43,7 +52,7 @@ const ROITab: React.FC<ROITabProps> = ({ filters }) => {
       maximumFractionDigits: 1
     }).format(value);
   };
-  
+
   const handleSort = (field: SortField) => {
     if (sortField === field) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
@@ -52,15 +61,15 @@ const ROITab: React.FC<ROITabProps> = ({ filters }) => {
       setSortDirection('desc');
     }
   };
-  
+
   const getSortIcon = (field: SortField) => {
     if (sortField !== field) return null;
-    
+
     return (
       <ArrowUpDown size={14} className="ml-1 inline" />
     );
   };
-  
+
   // Prepare data for chart
   const chartData = sortedData.map(channel => ({
     name: channel.channel,
@@ -69,7 +78,7 @@ const ROITab: React.FC<ROITabProps> = ({ filters }) => {
     revenue: channel.revenue,
     color: channel.color
   }));
-  
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -82,7 +91,7 @@ const ROITab: React.FC<ROITabProps> = ({ filters }) => {
           <span>Settings</span>
         </button>
       </div>
-      
+
       {showSettings && (
         <div className="card animate-fade-in">
           <h3 className="text-lg font-medium mb-3">Display Settings</h3>
@@ -118,7 +127,7 @@ const ROITab: React.FC<ROITabProps> = ({ filters }) => {
           </div>
         </div>
       )}
-      
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="card">
           <h3 className="text-lg font-medium mb-4">ROI by Channel</h3>
@@ -132,7 +141,7 @@ const ROITab: React.FC<ROITabProps> = ({ filters }) => {
                 <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
                 <XAxis type="number" domain={[0, 'auto']} />
                 <YAxis type="category" dataKey="name" width={80} />
-                <Tooltip 
+                <Tooltip
                   formatter={(value) => [`${(value as number).toFixed(2)}x`, 'ROI']}
                 />
                 <Bar dataKey="roi" name="ROI">
@@ -144,7 +153,7 @@ const ROITab: React.FC<ROITabProps> = ({ filters }) => {
             </ResponsiveContainer>
           </div>
         </div>
-        
+
         <div className="card">
           <h3 className="text-lg font-medium mb-4">Investment vs. Incremental Revenue</h3>
           <div className="h-80">
@@ -155,7 +164,7 @@ const ROITab: React.FC<ROITabProps> = ({ filters }) => {
               >
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="name" />
-                <YAxis 
+                <YAxis
                   tickFormatter={(value) => `${(value / 1000).toFixed(0)}k €`}
                 />
                 <Tooltip formatter={(value) => formatCurrency(value as number)} />
@@ -171,14 +180,14 @@ const ROITab: React.FC<ROITabProps> = ({ filters }) => {
           </div>
         </div>
       </div>
-      
+
       <div className="card">
         <h3 className="text-lg font-medium mb-4">ROI Performance Table</h3>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[768px]">
             <thead>
               <tr className="bg-slate-50">
-                <th 
+                <th
                   className="p-3 text-left text-sm font-semibold text-slate-700 cursor-pointer hover:bg-slate-100"
                   onClick={() => handleSort('channel')}
                 >
@@ -186,7 +195,7 @@ const ROITab: React.FC<ROITabProps> = ({ filters }) => {
                     Channel {getSortIcon('channel')}
                   </span>
                 </th>
-                <th 
+                <th
                   className="p-3 text-right text-sm font-semibold text-slate-700 cursor-pointer hover:bg-slate-100"
                   onClick={() => handleSort('investment')}
                 >
@@ -194,7 +203,7 @@ const ROITab: React.FC<ROITabProps> = ({ filters }) => {
                     Investment {getSortIcon('investment')}
                   </span>
                 </th>
-                <th 
+                <th
                   className="p-3 text-right text-sm font-semibold text-slate-700 cursor-pointer hover:bg-slate-100"
                   onClick={() => handleSort('revenue')}
                 >
@@ -202,7 +211,7 @@ const ROITab: React.FC<ROITabProps> = ({ filters }) => {
                     Incremental Revenue {getSortIcon('revenue')}
                   </span>
                 </th>
-                <th 
+                <th
                   className="p-3 text-right text-sm font-semibold text-slate-700 cursor-pointer hover:bg-slate-100"
                   onClick={() => handleSort('roi')}
                 >
@@ -214,8 +223,8 @@ const ROITab: React.FC<ROITabProps> = ({ filters }) => {
             </thead>
             <tbody>
               {sortedData.map((channel, index) => (
-                <tr 
-                  key={index} 
+                <tr
+                  key={index}
                   className="border-t border-slate-100 hover:bg-slate-50 transition-colors"
                 >
                   <td className="p-3">
@@ -224,9 +233,8 @@ const ROITab: React.FC<ROITabProps> = ({ filters }) => {
                   <td className="p-3 text-right">{formatCurrency(channel.investment)}</td>
                   <td className="p-3 text-right">{formatCurrency(channel.revenue)}</td>
                   <td className="p-3 text-right font-medium">
-                    <span className={`px-2 py-1 rounded-full text-sm ${
-                      channel.roi > avgROI ? 'bg-success-100 text-success-700' : 'bg-slate-100 text-slate-700'
-                    }`}>
+                    <span className={`px-2 py-1 rounded-full text-sm ${channel.roi > avgROI ? 'bg-success-100 text-success-700' : 'bg-slate-100 text-slate-700'
+                      }`}>
                       {channel.roi.toFixed(2)}x
                     </span>
                   </td>

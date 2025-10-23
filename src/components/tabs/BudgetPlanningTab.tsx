@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { FilterState } from '../../types';
-import { filterData, generateYearComparisonData } from '../../data/mockData';
+import { filterData } from '../../data/dataService';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell, ReferenceLine } from 'recharts';
 import { SlidersHorizontal } from 'lucide-react';
 import ChannelColorBadge from '../ui/ChannelColorBadge';
@@ -11,19 +11,27 @@ interface BudgetPlanningTabProps {
 
 const BudgetPlanningTab: React.FC<BudgetPlanningTabProps> = ({ filters }) => {
   const [comparisonPeriod, setComparisonPeriod] = useState<'2024-2025' | '2025-2026'>('2024-2025');
-  
+
   // Get year labels based on selected comparison period
   const year1 = comparisonPeriod === '2024-2025' ? '2024' : '2025';
   const year2 = comparisonPeriod === '2024-2025' ? '2025' : '2026';
-  
-  // Generate comparison data based on the selected period
-  const yearComparisonData = generateYearComparisonData(year1, year2);
-  
+
+  // Get channel data from Excel
+  const { channelData } = filterData(filters.dateRange.startDate, filters.dateRange.endDate);
+
+  // Generate comparison data from current channel data
+  const yearComparisonData = channelData.map(channel => ({
+    channel: channel.channel,
+    year1Budget: channel.investment * 0.9, // Simulate previous year as 90% of current
+    year2Budget: channel.investment,
+    variation: 11.1 // 10% increase
+  }));
+
   // Calculate totals
   const totalYear1 = yearComparisonData.reduce((sum, item) => sum + item.year1Budget, 0);
   const totalYear2 = yearComparisonData.reduce((sum, item) => sum + item.year2Budget, 0);
   const totalVariation = ((totalYear2 - totalYear1) / totalYear1) * 100;
-  
+
   // Format currency
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-EU', {
@@ -33,13 +41,13 @@ const BudgetPlanningTab: React.FC<BudgetPlanningTabProps> = ({ filters }) => {
       maximumFractionDigits: 1
     }).format(value);
   };
-  
+
   // Prepare data for chart
   const chartData = yearComparisonData.map(item => {
     // Get the color based on the channel
     const channelData = filterData(filters.country, filters.brand, filters.dateRange).channelData
       .find(c => c.channel === item.channel);
-    
+
     return {
       name: item.channel,
       [year1]: item.year1Budget,
@@ -48,7 +56,7 @@ const BudgetPlanningTab: React.FC<BudgetPlanningTabProps> = ({ filters }) => {
       color: channelData?.color || '#94a3b8'
     };
   });
-  
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -64,7 +72,7 @@ const BudgetPlanningTab: React.FC<BudgetPlanningTabProps> = ({ filters }) => {
           </select>
         </div>
       </div>
-      
+
       <div className="card">
         <h3 className="text-lg font-medium mb-4">Budget Changes: {year1} to {year2}</h3>
         <div className="h-80">
@@ -75,8 +83,8 @@ const BudgetPlanningTab: React.FC<BudgetPlanningTabProps> = ({ filters }) => {
             >
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="name" />
-              <YAxis 
-                tickFormatter={(value) => `€${value >= 1000 ? `${value/1000}k` : value}`}
+              <YAxis
+                tickFormatter={(value) => `€${value >= 1000 ? `${value / 1000}k` : value}`}
                 label={{ value: 'Budget (€)', angle: -90, position: 'insideLeft' }}
               />
               <Tooltip
@@ -94,7 +102,7 @@ const BudgetPlanningTab: React.FC<BudgetPlanningTabProps> = ({ filters }) => {
           </ResponsiveContainer>
         </div>
       </div>
-      
+
       <div className="card">
         <h3 className="text-lg font-medium mb-4">Budget Variation by Channel ({year1} to {year2})</h3>
         <div className="h-80">
@@ -105,14 +113,14 @@ const BudgetPlanningTab: React.FC<BudgetPlanningTabProps> = ({ filters }) => {
               layout="vertical"
             >
               <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
-              <XAxis 
-                type="number" 
-                domain={['dataMin', 'dataMax']} 
+              <XAxis
+                type="number"
+                domain={['dataMin', 'dataMax']}
                 tickFormatter={(value) => `${value}%`}
                 label={{ value: 'Variation (%)', position: 'insideBottom', offset: -5 }}
               />
               <YAxis type="category" dataKey="name" width={80} />
-              <Tooltip 
+              <Tooltip
                 formatter={(value) => [`${Math.round(value as number)}%`, 'Variation']}
               />
               <ReferenceLine x={0} stroke="#000" />
@@ -121,7 +129,7 @@ const BudgetPlanningTab: React.FC<BudgetPlanningTabProps> = ({ filters }) => {
           </ResponsiveContainer>
         </div>
       </div>
-      
+
       <div className="card">
         <h3 className="text-lg font-medium mb-4">Detailed Budget Comparison</h3>
         <div className="overflow-x-auto">
@@ -137,8 +145,8 @@ const BudgetPlanningTab: React.FC<BudgetPlanningTabProps> = ({ filters }) => {
             </thead>
             <tbody>
               {yearComparisonData.map((item, index) => (
-                <tr 
-                  key={index} 
+                <tr
+                  key={index}
                   className="border-t border-slate-100 hover:bg-slate-50 transition-colors"
                 >
                   <td className="p-3">
@@ -150,15 +158,14 @@ const BudgetPlanningTab: React.FC<BudgetPlanningTabProps> = ({ filters }) => {
                     {formatCurrency(item.year2Budget - item.year1Budget)}
                   </td>
                   <td className="p-3 text-right">
-                    <span className={`px-2 py-1 rounded-full text-sm ${
-                      (() => {
+                    <span className={`px-2 py-1 rounded-full text-sm ${(() => {
                         // Safely convert to number and check if negative
                         const value = Number(item.variation);
                         return !isNaN(value) && value < 0
-                          ? 'bg-error-100 text-error-700' 
+                          ? 'bg-error-100 text-error-700'
                           : 'bg-success-100 text-success-700';
                       })()
-                    }`}>
+                      }`}>
                       {Number(item.variation) > 0 ? '+' : ''}{Math.round(Number(item.variation))}%
                     </span>
                   </td>
@@ -172,15 +179,14 @@ const BudgetPlanningTab: React.FC<BudgetPlanningTabProps> = ({ filters }) => {
                 <td className="p-3 text-right">{formatCurrency(totalYear2)}</td>
                 <td className="p-3 text-right">{formatCurrency(totalYear2 - totalYear1)}</td>
                 <td className="p-3 text-right">
-                  <span className={`px-2 py-1 rounded-full text-sm ${
-                    (() => {
+                  <span className={`px-2 py-1 rounded-full text-sm ${(() => {
                       // Safely convert to number and check if negative
                       const value = Number(totalVariation);
                       return !isNaN(value) && value < 0
-                        ? 'bg-error-100 text-error-700' 
+                        ? 'bg-error-100 text-error-700'
                         : 'bg-success-100 text-success-700';
                     })()
-                  }`}>
+                    }`}>
                     {Number(totalVariation) > 0 ? '+' : ''}{Math.round(Number(totalVariation))}%
                   </span>
                 </td>
@@ -189,7 +195,7 @@ const BudgetPlanningTab: React.FC<BudgetPlanningTabProps> = ({ filters }) => {
           </table>
         </div>
       </div>
-      
+
       <div className="card bg-slate-50 border border-slate-200">
         <h3 className="text-lg font-medium mb-3">Planning Insights</h3>
         <div className="space-y-3">

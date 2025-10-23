@@ -1,18 +1,11 @@
 // Commonly used types across the application
 
-export type Channel = 
-  | 'TV' 
-  | 'Radio' 
-  | 'Print' 
-  | 'Digital' 
-  | 'CRM' 
-  | 'Promo';
-
+// Dynamic types based on Excel data
 export type MediaType = 'Offline' | 'Online';
 
-export type Country = 'France' | 'UK' | 'Spain' | 'Italy' | 'Germany' | 'Portugal' | 'All Countries';
+export type Country = 'France';
 
-export type Brand = 'Novotel' | 'Pullman' | 'Ibis' | 'Mercure' | 'Sofitel' | 'All Brands';
+export type Brand = 'Dior';
 
 export type DateRange = {
   startDate: Date;
