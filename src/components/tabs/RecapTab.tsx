@@ -24,7 +24,8 @@ import {
   ResponsiveContainer,
   CartesianGrid,
   Line,
-  ReferenceLine
+  ReferenceLine,
+  ComposedChart
 } from 'recharts';
 import { filterData, isDataLoaded } from '../../data/dataService';
 import ChannelColorBadge from '../ui/ChannelColorBadge';
@@ -111,23 +112,29 @@ const RecapTab: React.FC<RecapTabProps> = ({ filters }) => {
     );
   }
 
-  const { channelData, monthlyData } = filterData(filters.dateRange.startDate, filters.dateRange.endDate);
+  const { channelData, monthlyData, contributions: weeklyContributions } = filterData(filters.dateRange.startDate, filters.dateRange.endDate);
 
-  // Calculate KPI values from filtered data instead of using static values
+  // Calculate KPI values from filtered data
   const totalInvestment = channelData.reduce((sum, channel) => sum + channel.investment, 0);
   const investmentGrowth = 12; // Static for now
 
-  const totalRevenue = channelData.reduce((sum, channel) => sum + channel.revenue, 0);
-  const avgROI = parseFloat((totalRevenue / totalInvestment).toFixed(1));
-  const totalROI = avgROI;
-  const actionableSellOut = totalInvestment * totalROI;
-  const totalSellOut = actionableSellOut * 1.5; // Making total sellout 50% higher than actionable sellout
+  // Calculate total sell out as sum of Sales column for the selected period
+  const totalSellOut = weeklyContributions.reduce((sum, week) => sum + (Number(week.sales) || 0), 0);
   const sellOutGrowth = 8; // Static for now
 
+  // Calculate total contribution (sum of all variable contributions, excluding Sales and Base)
   const totalContribution = channelData.reduce((sum, channel) => sum + channel.contribution, 0);
   const actionableGrowth = 15; // Static for now
 
+  // Calculate ROI as total contributions divided by total investments
+  const totalROI = totalInvestment > 0 ? parseFloat((totalContribution / totalInvestment).toFixed(2)) : 0;
   const roiGrowth = 5; // Static for now
+
+  // Calculate actionable sell out (sum of all contributions excluding base and sales)
+  const actionableSellOut = totalContribution;
+
+  // Use totalContribution for revenue display (for waterfall chart)
+  const totalRevenue = totalContribution;
 
   // Prepare data for investment pie chart
   const investmentPieData = channelData.map(channel => ({
@@ -143,11 +150,9 @@ const RecapTab: React.FC<RecapTabProps> = ({ filters }) => {
     color: channel.color
   }));
 
-  // Get real weekly contribution data from Excel
-  const { contributions } = filterData(filters.dateRange.startDate, filters.dateRange.endDate);
 
   // Prepare weekly contribution data for chart
-  const weeklyContributionData = contributions.map(week => {
+  const weeklyContributionData = weeklyContributions.map(week => {
     const chartData: any = {
       date: week.date.toISOString().split('T')[0], // Format as YYYY-MM-DD
       formattedDate: week.date.toLocaleDateString(), // For display
@@ -485,7 +490,7 @@ const RecapTab: React.FC<RecapTabProps> = ({ filters }) => {
             <PieChartIcon size={18} className="text-primary-600" />
             Investment Allocation
           </h3>
-          <div className="h-64">
+          <div className={`h-${Math.max(64, Math.min(96, 64 + (investmentPieData.length - 5) * 4))}`}>
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
@@ -493,11 +498,11 @@ const RecapTab: React.FC<RecapTabProps> = ({ filters }) => {
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  outerRadius={80}
+                  outerRadius={investmentPieData.length > 8 ? 60 : 80}
                   fill="#8884d8"
                   dataKey="value"
                   nameKey="name"
-                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                  label={investmentPieData.length <= 8 ? ({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%` : false}
                 >
                   {investmentPieData.map((entry, index) => (
                     <Cell key={`investment-cell-${index}`} fill={entry.color} />
@@ -507,11 +512,12 @@ const RecapTab: React.FC<RecapTabProps> = ({ filters }) => {
                   formatter={(value: number) => formatCurrency(value)}
                 />
                 <Legend
-                  layout="vertical"
-                  verticalAlign="middle"
-                  align="right"
+                  layout={investmentPieData.length > 8 ? "horizontal" : "vertical"}
+                  verticalAlign={investmentPieData.length > 8 ? "bottom" : "middle"}
+                  align={investmentPieData.length > 8 ? "center" : "right"}
+                  wrapperStyle={investmentPieData.length > 8 ? { paddingTop: '20px' } : {}}
                   content={({ payload }) => (
-                    <ul className="space-y-2">
+                    <ul className={`${investmentPieData.length > 8 ? 'flex flex-wrap gap-2 justify-center' : 'space-y-2'}`}>
                       {payload?.map((entry, index) => (
                         <li key={`investment-legend-${index}`} className="flex items-center gap-2">
                           <div
@@ -535,7 +541,7 @@ const RecapTab: React.FC<RecapTabProps> = ({ filters }) => {
             <PieChartIcon size={18} className="text-green-600" />
             Contribution Allocation
           </h3>
-          <div className="h-64">
+          <div className={`h-${Math.max(64, Math.min(96, 64 + (contributionPieData.length - 5) * 4))}`}>
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
@@ -543,11 +549,11 @@ const RecapTab: React.FC<RecapTabProps> = ({ filters }) => {
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  outerRadius={80}
+                  outerRadius={contributionPieData.length > 8 ? 60 : 80}
                   fill="#8884d8"
                   dataKey="value"
                   nameKey="name"
-                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                  label={contributionPieData.length <= 8 ? ({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%` : false}
                 >
                   {contributionPieData.map((entry, index) => (
                     <Cell key={`contribution-cell-${index}`} fill={entry.color} />
@@ -557,11 +563,12 @@ const RecapTab: React.FC<RecapTabProps> = ({ filters }) => {
                   formatter={(value: number) => formatCurrency(value)}
                 />
                 <Legend
-                  layout="vertical"
-                  verticalAlign="middle"
-                  align="right"
+                  layout={contributionPieData.length > 8 ? "horizontal" : "vertical"}
+                  verticalAlign={contributionPieData.length > 8 ? "bottom" : "middle"}
+                  align={contributionPieData.length > 8 ? "center" : "right"}
+                  wrapperStyle={contributionPieData.length > 8 ? { paddingTop: '20px' } : {}}
                   content={({ payload }) => (
-                    <ul className="space-y-2">
+                    <ul className={`${contributionPieData.length > 8 ? 'flex flex-wrap gap-2 justify-center' : 'space-y-2'}`}>
                       {payload?.map((entry, index) => (
                         <li key={`contribution-legend-${index}`} className="flex items-center gap-2">
                           <div
@@ -588,7 +595,7 @@ const RecapTab: React.FC<RecapTabProps> = ({ filters }) => {
         </h3>
         <div className="h-80">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart
+            <ComposedChart
               data={weeklyContributionData}
               margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
             >
@@ -645,16 +652,17 @@ const RecapTab: React.FC<RecapTabProps> = ({ filters }) => {
                 />
               ))}
 
-              {/* Sales line on top */}
+              {/* Sales line on top - black dotted line */}
               <Line
                 type="monotone"
                 dataKey="sales"
-                stroke="#EF4444"
+                stroke="#000000"
                 strokeWidth={2}
+                strokeDasharray="5 5"
                 dot={false}
                 name="Total Sales"
               />
-            </AreaChart>
+            </ComposedChart>
           </ResponsiveContainer>
         </div>
       </div>

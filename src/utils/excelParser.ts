@@ -202,9 +202,49 @@ export function filterDataByDateRange(
     startDate: Date,
     endDate: Date
 ): WeeklyData[] {
-    return data.filter(item =>
-        item.date >= startDate && item.date <= endDate
-    );
+    // Normalize dates to compare only date part (without time)
+    const startDateOnly = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+    const endDateOnly = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+
+    console.log('Filtering data by date range:', {
+        startDate: startDateOnly.toISOString().split('T')[0],
+        endDate: endDateOnly.toISOString().split('T')[0],
+        startDateTimestamp: startDateOnly.getTime(),
+        endDateTimestamp: endDateOnly.getTime(),
+        totalDataPoints: data.length,
+        firstDataPoint: data[0]?.date.toISOString().split('T')[0],
+        lastDataPoint: data[data.length - 1]?.date.toISOString().split('T')[0],
+        firstDataPointTimestamp: data[0]?.date.getTime(),
+        lastDataPointTimestamp: data[data.length - 1]?.date.getTime()
+    });
+
+    const filtered = data.filter(item => {
+        const itemDateOnly = new Date(item.date.getFullYear(), item.date.getMonth(), item.date.getDate());
+        const isInRange = itemDateOnly >= startDateOnly && itemDateOnly <= endDateOnly;
+
+        // Debug logging for edge cases
+        if (itemDateOnly.getTime() === endDateOnly.getTime()) {
+            console.log('End date match found:', {
+                itemDate: itemDateOnly.toISOString().split('T')[0],
+                endDate: endDateOnly.toISOString().split('T')[0],
+                isInRange: isInRange
+            });
+        }
+
+        if (!isInRange && itemDateOnly.getTime() === endDateOnly.getTime()) {
+            console.log('End date match found but filtered out:', itemDateOnly.toISOString().split('T')[0]);
+        }
+
+        return isInRange;
+    });
+
+    console.log('Filtered data points:', filtered.length);
+    if (filtered.length > 0) {
+        console.log('First filtered point:', filtered[0].date.toISOString().split('T')[0]);
+        console.log('Last filtered point:', filtered[filtered.length - 1].date.toISOString().split('T')[0]);
+    }
+
+    return filtered;
 }
 
 /**

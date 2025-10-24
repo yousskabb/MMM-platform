@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Sidebar from './Sidebar';
 import FilterBar from './FilterBar';
 import { FilterState } from '../../types';
-import { Activity, BarChart3, PieChart, LineChart, MessageCircle, Calculator, TrendingUp, Loader2 } from 'lucide-react';
+import { Activity, BarChart3, PieChart, LineChart, MessageCircle, Calculator, TrendingUp, Loader2, Database } from 'lucide-react';
 import RecapTab from '../tabs/RecapTab';
 import SynergiesTab from '../tabs/SynergiesTab';
 import ROITab from '../tabs/ROITab';
@@ -10,10 +10,11 @@ import BudgetPlanningTab from '../tabs/BudgetPlanningTab';
 import SimulationsTab from '../tabs/SimulationsTab';
 import ChatTab from '../tabs/ChatTab';
 import ResponseCurvesTab from '../tabs/ResponseCurvesTab';
+import DataTab from '../tabs/DataTab';
 import { loadExcelData, getAvailableDateRange, getAvailableDates, isDataLoaded, isDataLoading } from '../../data/dataService';
 import DebugExcel from '../DebugExcel';
 
-type Tab = 'recap' | 'synergies' | 'roi' | 'budget' | 'simulations' | 'response' | 'chat';
+type Tab = 'recap' | 'synergies' | 'roi' | 'budget' | 'simulations' | 'response' | 'chat' | 'data';
 
 interface TabConfig {
   id: Tab;
@@ -29,6 +30,7 @@ const tabConfig: TabConfig[] = [
   { id: 'response', label: 'Response Curves', icon: <TrendingUp size={20} /> },
   { id: 'simulations', label: 'Simulations', icon: <Calculator size={20} /> },
   { id: 'chat', label: 'Chat with Your Data', icon: <MessageCircle size={20} /> },
+  { id: 'data', label: 'Data', icon: <Database size={20} /> },
 ];
 
 const Layout: React.FC = () => {
@@ -102,6 +104,8 @@ const Layout: React.FC = () => {
         return <ResponseCurvesTab filters={filters} />;
       case 'chat':
         return <ChatTab filters={filters} />;
+      case 'data':
+        return <DataTab filters={filters} />;
       default:
         return <RecapTab filters={filters} />;
     }

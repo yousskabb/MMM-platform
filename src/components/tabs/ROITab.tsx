@@ -131,7 +131,7 @@ const ROITab: React.FC<ROITabProps> = ({ filters }) => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="card">
           <h3 className="text-lg font-medium mb-4">ROI by Channel</h3>
-          <div className="h-80">
+          <div className="h-96">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
                 data={chartData}
@@ -140,7 +140,12 @@ const ROITab: React.FC<ROITabProps> = ({ filters }) => {
               >
                 <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
                 <XAxis type="number" domain={[0, 'auto']} />
-                <YAxis type="category" dataKey="name" width={80} />
+                <YAxis
+                  type="category"
+                  dataKey="name"
+                  width={Math.max(120, Math.min(200, chartData.length * 8))}
+                  tick={{ fontSize: 12 }}
+                />
                 <Tooltip
                   formatter={(value) => [`${(value as number).toFixed(2)}x`, 'ROI']}
                 />
@@ -156,14 +161,20 @@ const ROITab: React.FC<ROITabProps> = ({ filters }) => {
 
         <div className="card">
           <h3 className="text-lg font-medium mb-4">Investment vs. Incremental Revenue</h3>
-          <div className="h-80">
+          <div className="h-96">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
                 data={chartData}
                 margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
               >
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
+                <XAxis
+                  dataKey="name"
+                  angle={chartData.length > 8 ? -45 : 0}
+                  textAnchor={chartData.length > 8 ? "end" : "middle"}
+                  height={chartData.length > 8 ? 80 : 60}
+                  tick={{ fontSize: chartData.length > 8 ? 10 : 12 }}
+                />
                 <YAxis
                   tickFormatter={(value) => `${(value / 1000).toFixed(0)}k €`}
                 />
