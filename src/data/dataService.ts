@@ -44,8 +44,8 @@ export async function loadExcelData(): Promise<void> {
 
     try {
         // Load Excel file from public/data folder
-        console.log('Attempting to load Excel file from /MMM-platform/data/data.xlsx');
-        cachedData = await parseExcelFile('/MMM-platform/data/data.xlsx');
+        console.log('Attempting to load Excel file from /data/data.xlsx');
+        cachedData = await parseExcelFile('/data/data.xlsx');
         console.log('Excel data loaded successfully:', cachedData);
     } catch (error) {
         console.error('Failed to load Excel data:', error);
@@ -119,16 +119,44 @@ export function filterDataByYear(year: number): YearlyData {
         };
     });
 
-    // Create monthly data (simplified - you can enhance this to show actual monthly breakdown)
+    // Create monthly data from actual weekly data
     const monthlyData: MonthlyChannelData[] = [];
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
+    // Initialize monthly totals for each channel
+    const monthlyTotals: { [key: string]: { [month: string]: { investment: number; contribution: number } } } = {};
+
     cachedData.variables.forEach(variable => {
+        monthlyTotals[variable] = {};
         months.forEach(month => {
-            // For now, distribute yearly totals evenly across months
-            // In a real implementation, you'd use actual monthly data
-            const monthlyInvestment = investmentTotals[variable] / 12;
-            const monthlyContribution = contributionTotals[variable] / 12;
+            monthlyTotals[variable][month] = { investment: 0, contribution: 0 };
+        });
+    });
+
+    // Aggregate weekly data by month
+    filteredInvestments.forEach(week => {
+        const monthIndex = week.date.getMonth();
+        const monthName = months[monthIndex];
+
+        cachedData!.variables.forEach(variable => {
+            monthlyTotals[variable][monthName].investment += (week[variable] as number) || 0;
+        });
+    });
+
+    filteredContributions.forEach(week => {
+        const monthIndex = week.date.getMonth();
+        const monthName = months[monthIndex];
+
+        cachedData!.variables.forEach(variable => {
+            monthlyTotals[variable][monthName].contribution += (week[variable] as number) || 0;
+        });
+    });
+
+    // Create monthly data entries
+    cachedData!.variables.forEach(variable => {
+        months.forEach(month => {
+            const monthlyInvestment = monthlyTotals[variable][month].investment;
+            const monthlyContribution = monthlyTotals[variable][month].contribution;
             const roi = monthlyInvestment > 0 ? monthlyContribution / monthlyInvestment : 0;
 
             monthlyData.push({

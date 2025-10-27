@@ -10,25 +10,67 @@ interface SynergyData {
   correlation: number;
 }
 
-// Calculate synergies between channels based on their performance
-function calculateSynergies(channelData: ChannelData[]): SynergyData[] {
+interface WeeklyData {
+  date: Date;
+  [key: string]: any;
+}
+
+// Calculate Pearson correlation between two channels based on their weekly contributions
+function calculatePearsonCorrelation(channel1Values: number[], channel2Values: number[]): number {
+  const n = channel1Values.length;
+
+  if (n === 0) return 0;
+
+  // Calculate means
+  const mean1 = channel1Values.reduce((sum, val) => sum + val, 0) / n;
+  const mean2 = channel2Values.reduce((sum, val) => sum + val, 0) / n;
+
+  // Calculate covariance and standard deviations
+  let covariance = 0;
+  let variance1 = 0;
+  let variance2 = 0;
+
+  for (let i = 0; i < n; i++) {
+    const diff1 = channel1Values[i] - mean1;
+    const diff2 = channel2Values[i] - mean2;
+    covariance += diff1 * diff2;
+    variance1 += diff1 * diff1;
+    variance2 += diff2 * diff2;
+  }
+
+  // Calculate correlation coefficient
+  const denominator = Math.sqrt(variance1 * variance2);
+
+  if (denominator === 0) return 0;
+
+  return covariance / denominator;
+}
+
+// Calculate synergies between channels based on actual weekly contribution data
+function calculateSynergies(channelData: ChannelData[], weeklyContributions: WeeklyData[], variables: string[]): SynergyData[] {
   const synergies: SynergyData[] = [];
 
-  for (let i = 0; i < channelData.length; i++) {
-    for (let j = i + 1; j < channelData.length; j++) {
-      const channel1 = channelData[i];
-      const channel2 = channelData[j];
+  // Extract weekly contribution values for each channel
+  const channelValues: { [key: string]: number[] } = {};
 
-      // Simple correlation calculation based on ROI performance
-      // In a real implementation, you'd use more sophisticated correlation analysis
-      const correlation = calculateSimpleCorrelation(
-        channel1.investment, channel1.contribution,
-        channel2.investment, channel2.contribution
+  variables.forEach(variable => {
+    channelValues[variable] = weeklyContributions.map(week => (week[variable] as number) || 0);
+  });
+
+  // Calculate correlation for each channel pair
+  for (let i = 0; i < variables.length; i++) {
+    for (let j = i + 1; j < variables.length; j++) {
+      const channel1 = variables[i];
+      const channel2 = variables[j];
+
+      const correlation = calculatePearsonCorrelation(
+        channelValues[channel1],
+        channelValues[channel2]
       );
 
       synergies.push({
-        channel1: channel1.channel,
-        channel2: channel2.channel,
+        channel1: channel1,
+        channel2: channel2,
         correlation
       });
     }
@@ -37,28 +79,15 @@ function calculateSynergies(channelData: ChannelData[]): SynergyData[] {
   return synergies;
 }
 
-// Simple correlation calculation
-function calculateSimpleCorrelation(
-  invest1: number, contrib1: number,
-  invest2: number, contrib2: number
-): number {
-  const roi1 = invest1 > 0 ? contrib1 / invest1 : 0;
-  const roi2 = invest2 > 0 ? contrib2 / invest2 : 0;
-
-  // Normalize to -1 to 1 range with some randomness for demo
-  const baseCorrelation = (roi1 + roi2) / 2 - 1;
-  return Math.max(-1, Math.min(1, baseCorrelation));
-}
-
 interface SynergiesTabProps {
   filters: FilterState;
 }
 
 const SynergiesTab: React.FC<SynergiesTabProps> = ({ filters }) => {
-  const { channelData } = filterDataByYear(filters.selectedYear);
+  const { channelData, contributions, variables } = filterDataByYear(filters.selectedYear);
 
-  // Calculate synergies from channel data (simplified correlation calculation)
-  const synergyData = calculateSynergies(channelData);
+  // Calculate synergies from actual weekly contribution data using Pearson correlation
+  const synergyData = calculateSynergies(channelData, contributions, variables);
 
   // Group synergy data by channel1 to create a matrix
   const channels = [...new Set([

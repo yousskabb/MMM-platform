@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import {
-  PieChart as PieChartIcon,
   BarChart as BarChartIcon,
   LineChart as LineChartIcon,
   Euro,
@@ -10,8 +9,6 @@ import {
 import KPICard from '../ui/KPICard';
 import { FilterState } from '../../types';
 import {
-  PieChart,
-  Pie,
   BarChart,
   Bar,
   Cell,
@@ -23,10 +20,11 @@ import {
   CartesianGrid,
   Line,
   ComposedChart,
-  Area
+  Area,
+  LabelList
 } from 'recharts';
 import { filterDataByYear, isDataLoaded } from '../../data/dataService';
-import ChannelColorBadge from '../ui/ChannelColorBadge';
+import { formatNumber, formatNumberDetailed, formatNumberAxis } from '../../utils/numberFormatter';
 
 interface RecapTabProps {
   filters: FilterState;
@@ -49,7 +47,7 @@ const RecapTab: React.FC<RecapTabProps> = ({ filters }) => {
   const previousYear = currentYear - 1;
 
   // Get current year data
-  const { channelData, contributions: weeklyContributions } = filterDataByYear(currentYear);
+  const { channelData, contributions: weeklyContributions, monthlyData } = filterDataByYear(currentYear);
 
   console.log(`RecapTab: Data for year ${currentYear}:`, {
     channelDataLength: channelData.length,
@@ -60,8 +58,11 @@ const RecapTab: React.FC<RecapTabProps> = ({ filters }) => {
 
   // Get previous year data (if available)
   let previousYearData: any = null;
+  let hasRealPreviousYearData = false;
+
   try {
     previousYearData = filterDataByYear(previousYear);
+    hasRealPreviousYearData = previousYearData.contributions.length > 0;
   } catch (error) {
     // If previous year data is not available, create mock data
     previousYearData = {
@@ -75,26 +76,67 @@ const RecapTab: React.FC<RecapTabProps> = ({ filters }) => {
         sales: (week.sales as number) * 0.9
       }))
     };
+    hasRealPreviousYearData = false;
   }
 
   // Calculate KPI values from current year filtered data
   const totalInvestment = channelData.reduce((sum, channel) => sum + channel.investment, 0);
-  const investmentGrowth = 12; // Static for now
 
   // Calculate total sell out as sum of Sales column for the selected year
   const totalSellOut = weeklyContributions.reduce((sum, week) => sum + (Number(week.sales) || 0), 0);
-  const sellOutGrowth = 8; // Static for now
 
   // Calculate total contribution (sum of all variable contributions, excluding Sales and Base)
   const totalContribution = channelData.reduce((sum, channel) => sum + channel.contribution, 0);
-  const actionableGrowth = 15; // Static for now
 
-  // Calculate ROI as total contributions divided by total investments
-  const totalROI = totalInvestment > 0 ? parseFloat((totalContribution / totalInvestment).toFixed(2)) : 0;
-  const roiGrowth = 5; // Static for now
+  // Calculate ROI as total contributions divided by total investments (exact value)
+  const totalROIExact = totalInvestment > 0 ? totalContribution / totalInvestment : 0;
+  // Round only for display
+  const totalROI = parseFloat(totalROIExact.toFixed(2));
 
   // Calculate actionable sell out (sum of all contributions excluding base and sales)
   const actionableSellOut = totalContribution;
+
+  // Calculate growth percentages by comparing with Y-1
+  let investmentGrowth: number | null = null;
+  let sellOutGrowth: number | null = null;
+  let actionableGrowth: number | null = null;
+  let roiGrowth: number | null = null;
+
+  if (hasRealPreviousYearData && previousYearData) {
+    // Calculate previous year KPIs
+    const prevTotalInvestment = previousYearData.channelData.reduce((sum: number, channel: any) => sum + channel.investment, 0);
+    const prevTotalSellOut = previousYearData.contributions.reduce((sum: number, week: any) => sum + (Number(week.sales) || 0), 0);
+    const prevTotalContribution = previousYearData.channelData.reduce((sum: number, channel: any) => sum + channel.contribution, 0);
+    const prevTotalROI = prevTotalInvestment > 0 ? prevTotalContribution / prevTotalInvestment : 0;
+    const prevActionableSellOut = prevTotalContribution;
+
+    // Calculate percentage changes
+    investmentGrowth = prevTotalInvestment > 0 ? ((totalInvestment - prevTotalInvestment) / prevTotalInvestment) * 100 : 0;
+    sellOutGrowth = prevTotalSellOut > 0 ? ((totalSellOut - prevTotalSellOut) / prevTotalSellOut) * 100 : 0;
+    actionableGrowth = prevActionableSellOut > 0 ? ((actionableSellOut - prevActionableSellOut) / prevActionableSellOut) * 100 : 0;
+
+    // ROI growth: ((Current ROI - Previous ROI) / Previous ROI) * 100
+    // Use exact values for calculation (not rounded for display)
+    roiGrowth = prevTotalROI > 0 ? ((totalROIExact - prevTotalROI) / prevTotalROI) * 100 : 0;
+
+    // Debug logging for ROI calculation
+    console.log('=== ROI GROWTH DEBUG ===');
+    console.log('Previous Year (Y-1):');
+    console.log(`  Total Investment: ${prevTotalInvestment.toLocaleString()}€`);
+    console.log(`  Total Contribution: ${prevTotalContribution.toLocaleString()}€`);
+    console.log(`  ROI (exact): ${prevTotalROI.toFixed(6)}`);
+    console.log(`  ROI (display): ${prevTotalROI.toFixed(2)}x`);
+    console.log('\nCurrent Year (Y):');
+    console.log(`  Total Investment: ${totalInvestment.toLocaleString()}€`);
+    console.log(`  Total Contribution: ${totalContribution.toLocaleString()}€`);
+    console.log(`  ROI (exact): ${totalROIExact.toFixed(6)}`);
+    console.log(`  ROI (display): ${totalROI.toFixed(2)}x`);
+    console.log('\nGrowth Calculation:');
+    console.log(`  Formula: ((exact ROI Y - exact ROI Y-1) / exact ROI Y-1) × 100`);
+    console.log(`  Calculation: ((${totalROIExact.toFixed(6)} - ${prevTotalROI.toFixed(6)}) / ${prevTotalROI.toFixed(6)}) × 100`);
+    console.log(`  Result: ${roiGrowth.toFixed(2)}%`);
+    console.log('========================');
+  }
 
   // Prepare data for investment pie chart (only current year data)
   const investmentPieData = channelData.map(channel => ({
@@ -170,29 +212,34 @@ const RecapTab: React.FC<RecapTabProps> = ({ filters }) => {
       }
     ];
 
-    // Add channel differences
-    channelDifferences.forEach(channel => {
-      waterfallData.push({
-        name: channel.channel,
-        value: channel.difference,
-        base: 0,
-        step: channel.difference,
-        isTotal: false,
-        displayValue: channel.difference,
-        color: channel.color
+    // Add channel differences - only include channels with meaningful differences
+    channelDifferences
+      .filter(channel => Math.abs(channel.difference) > 1000) // Only show significant changes
+      .sort((a, b) => Math.abs(b.difference) - Math.abs(a.difference)) // Sort by magnitude
+      .forEach(channel => {
+        waterfallData.push({
+          name: channel.channel,
+          value: channel.difference,
+          base: 0,
+          step: channel.difference,
+          isTotal: false,
+          displayValue: channel.difference,
+          color: channel.color
+        });
       });
-    });
 
-    // Add unexplained variance
-    waterfallData.push({
-      name: 'Unexplained Variance',
-      value: unexplainedVariance,
-      base: 0,
-      step: unexplainedVariance,
-      isTotal: false,
-      displayValue: unexplainedVariance,
-      color: '#94a3b8'
-    });
+    // Add unexplained variance if significant
+    if (Math.abs(unexplainedVariance) > 1000) {
+      waterfallData.push({
+        name: 'Unexplained',
+        value: unexplainedVariance,
+        base: 0,
+        step: unexplainedVariance,
+        isTotal: false,
+        displayValue: unexplainedVariance,
+        color: '#94a3b8'
+      });
+    }
 
     // Add current year total
     waterfallData.push({
@@ -233,20 +280,11 @@ const RecapTab: React.FC<RecapTabProps> = ({ filters }) => {
     }
   });
 
-  // Format currency
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('en-EU', {
-      style: 'currency',
-      currency: 'EUR',
-      notation: value >= 1000000 ? 'compact' : 'standard',
-      maximumFractionDigits: 1
-    }).format(value);
-  };
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-semibold text-slate-800">Marketing Performance Recap</h1>
+        <h1 className="text-2xl font-semibold text-slate-800">Marketing Performance Recap ({currentYear})</h1>
         <button
           onClick={() => setShowInsights(true)}
           className="btn btn-primary flex items-center gap-2"
@@ -261,133 +299,103 @@ const RecapTab: React.FC<RecapTabProps> = ({ filters }) => {
         <KPICard
           title="Total Investments"
           value={parseFloat(totalInvestment.toFixed(1))}
-          indicator={investmentGrowth}
+          indicator={investmentGrowth !== null ? investmentGrowth : undefined}
+          previousYear={hasRealPreviousYearData ? previousYear : undefined}
           icon={<Euro size={20} />}
           color="primary-600"
         />
         <KPICard
           title="Total Sell-Out"
           value={parseFloat(totalSellOut.toFixed(1))}
-          indicator={sellOutGrowth}
+          indicator={sellOutGrowth !== null ? sellOutGrowth : undefined}
+          previousYear={hasRealPreviousYearData ? previousYear : undefined}
           icon={<BarChartIcon size={20} />}
           color="success-600"
         />
         <KPICard
           title="Actionable Sell-Out"
           value={parseFloat(actionableSellOut.toFixed(1))}
-          indicator={actionableGrowth}
+          indicator={actionableGrowth !== null ? actionableGrowth : undefined}
+          previousYear={hasRealPreviousYearData ? previousYear : undefined}
           icon={<TrendingUp size={20} />}
           color="accent-600"
         />
         <KPICard
           title="Total ROI"
           value={`${totalROI}x`}
-          indicator={roiGrowth}
+          indicator={roiGrowth !== null ? roiGrowth : undefined}
+          previousYear={hasRealPreviousYearData ? previousYear : undefined}
           icon={<LineChartIcon size={20} />}
           color="secondary-600"
         />
       </div>
 
-      {/* 2. Channel Allocation Pie Charts */}
+      {/* 2. Channel Allocation Bar Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Investment Pie Chart */}
+        {/* Investment Bar Chart */}
         <div className="card">
           <h3 className="text-lg font-medium mb-4 flex items-center gap-2">
-            <PieChartIcon size={18} className="text-primary-600" />
+            <BarChartIcon size={18} className="text-primary-600" />
             Investment Allocation
           </h3>
-          <div className={`h-${Math.max(64, Math.min(96, 64 + (investmentPieData.length - 5) * 4))}`}>
+          <div style={{ height: `${Math.max(300, investmentPieData.length * 35)}px` }}>
             <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={investmentPieData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  outerRadius={investmentPieData.length > 8 ? 60 : 80}
-                  fill="#8884d8"
-                  dataKey="value"
-                  nameKey="name"
-                  label={investmentPieData.length <= 8 ? ({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%` : false}
-                >
+              <BarChart
+                data={investmentPieData}
+                margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                layout="vertical"
+              >
+                <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
+                <XAxis type="number" tickFormatter={(value) => formatNumberAxis(value)} />
+                <YAxis
+                  type="category"
+                  dataKey="name"
+                  width={Math.max(120, Math.min(200, investmentPieData.length * 8))}
+                  tick={{ fontSize: 12 }}
+                />
+                <Tooltip
+                  formatter={(value: number) => formatNumberDetailed(value)}
+                />
+                <Bar dataKey="value" name="Investment">
                   {investmentPieData.map((entry, index) => (
                     <Cell key={`investment-cell-${index}`} fill={entry.color} />
                   ))}
-                </Pie>
-                <Tooltip
-                  formatter={(value: number) => formatCurrency(value)}
-                />
-                <Legend
-                  layout={investmentPieData.length > 8 ? "horizontal" : "vertical"}
-                  verticalAlign={investmentPieData.length > 8 ? "bottom" : "middle"}
-                  align={investmentPieData.length > 8 ? "center" : "right"}
-                  wrapperStyle={investmentPieData.length > 8 ? { paddingTop: '20px' } : {}}
-                  content={({ payload }) => (
-                    <ul className={`${investmentPieData.length > 8 ? 'flex flex-wrap gap-2 justify-center' : 'space-y-2'}`}>
-                      {payload?.map((entry, index) => (
-                        <li key={`investment-legend-${index}`} className="flex items-center gap-2">
-                          <div
-                            className="w-3 h-3 rounded-full"
-                            style={{ backgroundColor: entry.color }}
-                          />
-                          <span className="text-sm">{entry.value}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                />
-              </PieChart>
+                </Bar>
+              </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        {/* Contribution Pie Chart */}
+        {/* Contribution Bar Chart */}
         <div className="card">
           <h3 className="text-lg font-medium mb-4 flex items-center gap-2">
-            <PieChartIcon size={18} className="text-green-600" />
+            <BarChartIcon size={18} className="text-green-600" />
             Contribution Allocation
           </h3>
-          <div className={`h-${Math.max(64, Math.min(96, 64 + (contributionPieData.length - 5) * 4))}`}>
+          <div style={{ height: `${Math.max(300, contributionPieData.length * 35)}px` }}>
             <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={contributionPieData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  outerRadius={contributionPieData.length > 8 ? 60 : 80}
-                  fill="#8884d8"
-                  dataKey="value"
-                  nameKey="name"
-                  label={contributionPieData.length <= 8 ? ({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%` : false}
-                >
+              <BarChart
+                data={contributionPieData}
+                margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                layout="vertical"
+              >
+                <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
+                <XAxis type="number" tickFormatter={(value) => formatNumberAxis(value)} />
+                <YAxis
+                  type="category"
+                  dataKey="name"
+                  width={Math.max(120, Math.min(200, contributionPieData.length * 8))}
+                  tick={{ fontSize: 12 }}
+                />
+                <Tooltip
+                  formatter={(value: number) => formatNumberDetailed(value)}
+                />
+                <Bar dataKey="value" name="Contribution">
                   {contributionPieData.map((entry, index) => (
                     <Cell key={`contribution-cell-${index}`} fill={entry.color} />
                   ))}
-                </Pie>
-                <Tooltip
-                  formatter={(value: number) => formatCurrency(value)}
-                />
-                <Legend
-                  layout={contributionPieData.length > 8 ? "horizontal" : "vertical"}
-                  verticalAlign={contributionPieData.length > 8 ? "bottom" : "middle"}
-                  align={contributionPieData.length > 8 ? "center" : "right"}
-                  wrapperStyle={contributionPieData.length > 8 ? { paddingTop: '20px' } : {}}
-                  content={({ payload }) => (
-                    <ul className={`${contributionPieData.length > 8 ? 'flex flex-wrap gap-2 justify-center' : 'space-y-2'}`}>
-                      {payload?.map((entry, index) => (
-                        <li key={`contribution-legend-${index}`} className="flex items-center gap-2">
-                          <div
-                            className="w-3 h-3 rounded-full"
-                            style={{ backgroundColor: entry.color }}
-                          />
-                          <span className="text-sm">{entry.value}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                />
-              </PieChart>
+                </Bar>
+              </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
@@ -412,12 +420,12 @@ const RecapTab: React.FC<RecapTabProps> = ({ filters }) => {
                 interval="preserveStartEnd"
               />
               <YAxis
-                tickFormatter={(value) => `€${(value / 1000).toFixed(0)}K`}
+                tickFormatter={(value) => formatNumberAxis(value)}
                 tick={{ fontSize: 11 }}
-                width={45}
+                width={60}
               />
               <Tooltip
-                formatter={(value, name) => [formatCurrency(value as number), name]}
+                formatter={(value, name) => [formatNumberDetailed(value as number), name]}
                 labelFormatter={(label) => {
                   const date = new Date(label);
                   return date.toLocaleDateString('en-US', {
@@ -479,12 +487,12 @@ const RecapTab: React.FC<RecapTabProps> = ({ filters }) => {
           <BarChartIcon size={18} className="text-primary-600" />
           Year-over-Year Performance: {previousYear} vs {currentYear}
         </h3>
-        <div className="h-80">
+        <div className="h-[600px]">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={processedWaterfallData}
-              margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-              barCategoryGap={4}
+              margin={{ top: 40, right: 30, left: 20, bottom: 100 }}
+              barCategoryGap={10}
             >
               <defs>
                 <linearGradient id="colorPositive" x1="0" y1="0" x2="0" y2="1">
@@ -503,12 +511,14 @@ const RecapTab: React.FC<RecapTabProps> = ({ filters }) => {
               <CartesianGrid strokeDasharray="3 3" vertical={false} />
               <XAxis
                 dataKey="name"
-                tick={{ fontSize: 12 }}
+                tick={{ fontSize: 11, angle: -35, textAnchor: 'end' }}
                 tickLine={false}
                 axisLine={{ stroke: '#cbd5e1' }}
+                height={80}
+                interval={0}
               />
               <YAxis
-                tickFormatter={(value) => formatCurrency(value)}
+                tickFormatter={(value) => formatNumberAxis(value)}
                 tick={{ fontSize: 12 }}
                 tickLine={false}
                 axisLine={{ stroke: '#cbd5e1' }}
@@ -520,12 +530,12 @@ const RecapTab: React.FC<RecapTabProps> = ({ filters }) => {
                   if (props?.payload?.displayValue) {
                     const displayValue = props.payload.displayValue;
                     const sign = displayValue >= 0 ? '+' : '';
-                    const formattedValue = typeof displayValue === 'number' ? formatCurrency(displayValue) : displayValue;
+                    const formattedValue = typeof displayValue === 'number' ? formatNumberDetailed(displayValue) : displayValue;
                     return displayValue === props.payload.value
                       ? [formattedValue]
                       : [`${sign}${formattedValue}`];
                   }
-                  return [formatCurrency(Number(value))];
+                  return [formatNumberDetailed(Number(value))];
                 }}
                 labelFormatter={(name) => `${name}`}
                 cursor={{ fill: 'rgba(203, 213, 225, 0.1)' }}
@@ -554,6 +564,41 @@ const RecapTab: React.FC<RecapTabProps> = ({ filters }) => {
                 stackId="stack"
                 radius={[4, 4, 0, 0]}
               >
+                <LabelList
+                  content={(props: any) => {
+                    const { payload, index } = props;
+                    if (!payload || index === undefined) return null;
+
+                    const entry = processedWaterfallData[index];
+
+                    // Don't show labels for total bars (grey ones)
+                    if (entry.isTotal) return null;
+
+                    // Skip tiny bars
+                    const barHeight = Math.abs(entry.step);
+                    const maxValue = Math.max(...processedWaterfallData.map(e => e.base + Math.abs(e.step)));
+                    const minBarHeight = maxValue * 0.01;
+
+                    if (barHeight < minBarHeight) return null;
+
+                    // Format the label
+                    let label = formatNumber(entry.displayValue || entry.step);
+                    label = `${entry.step > 0 ? '+' : ''}${label}`;
+
+                    return (
+                      <text
+                        x={props.x + props.width / 2}
+                        y={props.y + props.height + 15}
+                        fill={entry.step > 0 ? '#16a34a' : '#dc2626'}
+                        textAnchor="middle"
+                        fontSize={11}
+                        fontWeight="600"
+                      >
+                        {label}
+                      </text>
+                    );
+                  }}
+                />
                 {processedWaterfallData.map((entry, index) => (
                   <Cell
                     key={`cell-${index}`}
@@ -569,34 +614,72 @@ const RecapTab: React.FC<RecapTabProps> = ({ filters }) => {
                   />
                 ))}
               </Bar>
-
-              {/* Value labels for each bar */}
-              {processedWaterfallData.map((entry, index) => {
-                // Position for the label
-                const y = entry.base + (entry.step / 2);
-                let label = formatCurrency(entry.displayValue || entry.step);
-
-                // Special formatting for interim steps (not totals)
-                if (!entry.isTotal && index > 0) {
-                  label = `${entry.step > 0 ? '+' : ''}${label}`;
-                }
-
-                return (
-                  <text
-                    key={`label-${index}`}
-                    x={index + 0.5}
-                    y={entry.step > 0 ? y - 15 : y + 15}
-                    fill={entry.isTotal ? '#4B5563' : (entry.step > 0 ? '#16a34a' : '#dc2626')}
-                    textAnchor="middle"
-                    fontSize={12}
-                    fontWeight="500"
-                  >
-                    {label}
-                  </text>
-                );
-              })}
             </BarChart>
           </ResponsiveContainer>
+        </div>
+      </div>
+
+      {/* 5. Monthly Performance by Channel Table */}
+      <div className="card">
+        <h3 className="text-lg font-medium mb-4 flex items-center gap-2">
+          <BarChartIcon size={18} className="text-primary-600" />
+          Monthly Performance by Channel (ROI)
+        </h3>
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse">
+            <thead>
+              <tr className="border-b border-slate-200">
+                <th className="text-left py-2 px-3 font-semibold text-slate-700 bg-slate-50 sticky left-0 z-10">Channel</th>
+                {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map(month => (
+                  <th key={month} className="text-center py-2 px-2 font-semibold text-slate-700 bg-slate-50 min-w-[70px]">
+                    {month}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {channelData.map((channel) => {
+                const channelMonthlyData = monthlyData.filter(m => m.channel === channel.channel);
+
+                return (
+                  <tr key={channel.channel} className="border-b border-slate-100 hover:bg-slate-50">
+                    <td className="py-2 px-3 font-medium text-slate-800 sticky left-0 bg-white z-10 whitespace-nowrap">
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="w-3 h-3 rounded-full flex-shrink-0"
+                          style={{ backgroundColor: channel.color }}
+                        />
+                        <span>{channel.channel}</span>
+                      </div>
+                    </td>
+                    {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map(month => {
+                      const monthData = channelMonthlyData.find(m => m.month === month);
+                      const roi = monthData?.roi || 0;
+
+                      // Calculate green intensity based on ROI (normalize to 0-1 scale)
+                      // Assuming ROI ranges from 0 to ~3
+                      const normalizedRoi = Math.min(roi / 2, 1); // Scale to max of 2x ROI
+                      const intensity = Math.max(0, Math.min(1, normalizedRoi));
+                      // Opacity range from 0.1 (almost white) to 0.7 (dark green) for better contrast
+                      const opacity = 0.1 + (intensity * 0.6);
+
+                      return (
+                        <td
+                          key={month}
+                          className="text-center py-2 px-2 text-sm font-medium whitespace-nowrap"
+                          style={{
+                            backgroundColor: `rgba(34, 197, 94, ${opacity})`, // Light green to dark green
+                          }}
+                        >
+                          {roi > 0 ? `${roi.toFixed(2)}x` : '-'}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>

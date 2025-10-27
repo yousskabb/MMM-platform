@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { FilterState, ChannelData } from '../../types';
 import { filterDataByYear, isDataLoaded } from '../../data/dataService';
+import { getVariableColors } from '../../utils/colorGenerator';
 import DataTable from '../ui/DataTable';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
 import { ArrowUpDown, SlidersHorizontal } from 'lucide-react';
 import ChannelColorBadge from '../ui/ChannelColorBadge';
+import { formatNumber, formatNumberDetailed, formatNumberAxis } from '../../utils/numberFormatter';
 
 interface ROITabProps {
   filters: FilterState;
@@ -27,31 +29,29 @@ const ROITab: React.FC<ROITabProps> = ({ filters }) => {
     );
   }
 
-  const { channelData } = filterDataByYear(filters.selectedYear);
+  const { channelData, variables } = filterDataByYear(filters.selectedYear);
+
+  // Get variable colors to maintain consistent channel order
+  const variableColors = getVariableColors(variables);
+
+  // Sort channelData to match the order in variables (same order as rest of app)
+  const orderedChannelData = variables.map(varName =>
+    channelData.find(ch => ch.channel === varName)!
+  ).filter(ch => ch !== undefined);
 
   // Calculate totals
-  const totalInvestment = channelData.reduce((sum, channel) => sum + channel.investment, 0);
-  const totalRevenue = channelData.reduce((sum, channel) => sum + channel.revenue, 0);
+  const totalInvestment = orderedChannelData.reduce((sum, channel) => sum + channel.investment, 0);
+  const totalRevenue = orderedChannelData.reduce((sum, channel) => sum + channel.revenue, 0);
   const avgROI = totalRevenue / totalInvestment;
 
   // Sort data
-  const sortedData = [...channelData].sort((a, b) => {
+  const sortedData = [...orderedChannelData].sort((a, b) => {
     if (sortDirection === 'asc') {
       return a[sortField] > b[sortField] ? 1 : -1;
     } else {
       return a[sortField] < b[sortField] ? 1 : -1;
     }
   });
-
-  // Format currency
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('en-EU', {
-      style: 'currency',
-      currency: 'EUR',
-      notation: value >= 1000000 ? 'compact' : 'standard',
-      maximumFractionDigits: 1
-    }).format(value);
-  };
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -139,12 +139,17 @@ const ROITab: React.FC<ROITabProps> = ({ filters }) => {
                 layout="vertical"
               >
                 <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
-                <XAxis type="number" domain={[0, 'auto']} />
+                <XAxis
+                  type="number"
+                  domain={[0, 'auto']}
+                  tickFormatter={(value) => `${value.toFixed(1)}x`}
+                />
                 <YAxis
                   type="category"
                   dataKey="name"
-                  width={Math.max(120, Math.min(200, chartData.length * 8))}
-                  tick={{ fontSize: 12 }}
+                  width={Math.max(150, Math.min(250, chartData.length * 10))}
+                  tick={{ fontSize: 11 }}
+                  interval={0}
                 />
                 <Tooltip
                   formatter={(value) => [`${(value as number).toFixed(2)}x`, 'ROI']}
@@ -176,9 +181,9 @@ const ROITab: React.FC<ROITabProps> = ({ filters }) => {
                   tick={{ fontSize: chartData.length > 8 ? 10 : 12 }}
                 />
                 <YAxis
-                  tickFormatter={(value) => `${(value / 1000).toFixed(0)}k €`}
+                  tickFormatter={(value) => formatNumberAxis(value)}
                 />
-                <Tooltip formatter={(value) => formatCurrency(value as number)} />
+                <Tooltip formatter={(value) => formatNumberDetailed(value as number)} />
                 <Legend />
                 <Bar dataKey="investment" name="Investment" fill="#94a3b8" />
                 <Bar dataKey="revenue" name="Incremental Revenue">
@@ -241,8 +246,8 @@ const ROITab: React.FC<ROITabProps> = ({ filters }) => {
                   <td className="p-3">
                     <ChannelColorBadge channel={channel.channel} />
                   </td>
-                  <td className="p-3 text-right">{formatCurrency(channel.investment)}</td>
-                  <td className="p-3 text-right">{formatCurrency(channel.revenue)}</td>
+                  <td className="p-3 text-right">{formatNumber(channel.investment)}</td>
+                  <td className="p-3 text-right">{formatNumber(channel.revenue)}</td>
                   <td className="p-3 text-right font-medium">
                     <span className={`px-2 py-1 rounded-full text-sm ${channel.roi > avgROI ? 'bg-success-100 text-success-700' : 'bg-slate-100 text-slate-700'
                       }`}>
@@ -255,8 +260,8 @@ const ROITab: React.FC<ROITabProps> = ({ filters }) => {
             <tfoot>
               <tr className="bg-slate-50 font-semibold border-t-2 border-slate-200">
                 <td className="p-3">Total / Average</td>
-                <td className="p-3 text-right">{formatCurrency(totalInvestment)}</td>
-                <td className="p-3 text-right">{formatCurrency(totalRevenue)}</td>
+                <td className="p-3 text-right">{formatNumber(totalInvestment)}</td>
+                <td className="p-3 text-right">{formatNumber(totalRevenue)}</td>
                 <td className="p-3 text-right">{avgROI.toFixed(2)}x</td>
               </tr>
             </tfoot>
