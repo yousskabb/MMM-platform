@@ -1,77 +1,99 @@
 import React, { useState, useEffect } from 'react';
-import { FilterState, SimulationData } from '../../types';
-import { filterData } from '../../data/mockData';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell, Treemap } from 'recharts';
-import { Play, BarChart4, Calculator, Zap, Eye, X } from 'lucide-react';
+import { FilterState } from '../../types';
+import { filterDataByYear, getAvailableYears } from '../../data/dataService';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell, ComposedChart, Area, Line } from 'recharts';
+import { CheckCircle, AlertCircle } from 'lucide-react';
 import ChannelColorBadge from '../ui/ChannelColorBadge';
-// Import the components (adjust paths if necessary)
-import CreateSimulation from '../simulations/CreateSimulation';
-import CreateOptimization from '../optimization/CreateOptimization';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table';
-import { Button } from '../../components/ui/button';
+import { formatNumber, formatNumberDetailed, formatNumberAxis } from '../../utils/numberFormatter';
 
 interface SimulationsTabProps {
   filters: FilterState;
 }
 
-// Custom component for the Treemap
-const CustomizedContent = (props: any) => {
-  const { x, y, width, height, index, name, percentage, value } = props;
-  
-  return (
-    <g>
-      <rect
-        x={x}
-        y={y}
-        width={width}
-        height={height}
-        style={{ fill: COLORS[index % COLORS.length], stroke: '#fff', strokeWidth: 2 }}
-      />
-      {width > 70 && height > 60 ? (
-        <>
-          <text x={x + width / 2} y={y + height / 2 - 12} textAnchor="middle" fill="#fff" fontWeight="bold">
-            {name}
-          </text>
-          <text x={x + width / 2} y={y + height / 2 + 12} textAnchor="middle" fill="#fff">
-            {percentage}%
-          </text>
-        </>
-      ) : null}
-    </g>
-  );
-};
-
-// Colors for the channels
-const COLORS = ["#8884d8", "#55B78D", "#82ca9d", "#ffc658", "#ff8042", "#0088fe"];
+interface SimulationRow {
+  channel: string;
+  referenceBudget: number;
+  newBudget: number;
+  variation: number;
+  roi: number;
+  expectedContribution: number;
+  color: string;
+}
 
 const SimulationsTab: React.FC<SimulationsTabProps> = ({ filters }) => {
-  const { simulationData: initialData } = filterData(filters.country, filters.brand, filters.dateRange);
-  
-  const [simulationData, setSimulationData] = useState<SimulationData[]>(initialData);
-  const [isSimulating, setIsSimulating] = useState(false);
-  const [showSimulation, setShowSimulation] = useState(false);
-  const [showOptimization, setShowOptimization] = useState(false);
-  const [scenarios, setScenarios] = useState<any[]>([]);
-  const [selectedScenario, setSelectedScenario] = useState<any>(null);
-  const [showScenarioDetails, setShowScenarioDetails] = useState(false);
-  
-  // Reset simulation when filters change
+  const [latestYear, setLatestYear] = useState<number>(2025);
+  const [referenceData, setReferenceData] = useState<any[]>([]);
+  const [simulationData, setSimulationData] = useState<SimulationRow[]>([]);
+  const [isStarted, setIsStarted] = useState(false);
+  const [isValidated, setIsValidated] = useState(false);
+
+  // Load latest year data on mount
   useEffect(() => {
-    setSimulationData(initialData);
-    setIsSimulating(false);
-  }, [filters, initialData]);
-  
-  const handleBudgetChange = (channel: string, newValue: number) => {
-    setSimulationData(prevData => 
-      prevData.map(item => {
+    const availableYears = getAvailableYears();
+    if (availableYears.length > 0) {
+      const latest = availableYears[availableYears.length - 1];
+      setLatestYear(latest);
+
+      const data = filterDataByYear(latest);
+      setReferenceData(data.channelData);
+
+      // Initialize simulation data
+      const initData: SimulationRow[] = data.channelData.map(channel => ({
+        channel: channel.channel,
+        referenceBudget: channel.investment,
+        newBudget: channel.investment, // Start with same as reference
+        variation: 0,
+        roi: channel.roi,
+        expectedContribution: channel.investment * channel.roi, // Will be calculated when user inputs budget
+        color: channel.color
+      }));
+      setSimulationData(initData);
+    }
+  }, []);
+
+  const handleBudgetChange = (channel: string, inputValue: string) => {
+    // User inputs in millions, accept both ; and , as decimal separators
+
+    // Replace ; with . for parsing
+    const normalizedValue = inputValue.replace(/;/g, '.').replace(/,/g, '.');
+
+    // If empty, allow it
+    if (normalizedValue === '' || normalizedValue === '.') {
+      setSimulationData(prev =>
+        prev.map(item => {
+          if (item.channel === channel) {
+            return {
+              ...item,
+              newBudget: 0,
+              variation: 0,
+              expectedContribution: 0
+            };
+          }
+          return item;
+        })
+      );
+      return;
+    }
+
+    const parsedValue = parseFloat(normalizedValue);
+
+    // If not a valid number, just return (let user continue typing)
+    if (isNaN(parsedValue)) {
+      return;
+    }
+
+    const newValue = parsedValue * 1000000;
+
+    setSimulationData(prev =>
+      prev.map(item => {
         if (item.channel === channel) {
-          // Simple ROI calculation based on budget change
-          const expectedROI = item.expectedROI * (1 - (newValue - item.currentBudget) / item.currentBudget * 0.1);
+          const variation = item.referenceBudget > 0 ? ((newValue - item.referenceBudget) / item.referenceBudget) * 100 : 0;
+          const expectedContribution = newValue * item.roi;
           return {
             ...item,
             newBudget: newValue,
-            expectedROI: expectedROI > 0 ? expectedROI : item.expectedROI * 0.5
+            variation,
+            expectedContribution
           };
         }
         return item;
@@ -79,362 +101,348 @@ const SimulationsTab: React.FC<SimulationsTabProps> = ({ filters }) => {
     );
   };
 
-  const handleAddScenario = (newScenario: any) => {
-    setScenarios(prev => [newScenario, ...prev]);
-    setShowSimulation(false);
-    setShowOptimization(false);
+  const handleValidate = () => {
+    setIsValidated(true);
   };
-  
-  const handleViewScenario = (scenario: any) => {
-    setSelectedScenario(scenario);
-    setShowScenarioDetails(true);
+
+  const handleStartSimulation = () => {
+    setIsStarted(true);
+    setIsValidated(false);
   };
-  
-  const closeScenarioDetails = () => {
-    setShowScenarioDetails(false);
-    setSelectedScenario(null);
+
+  const handleReset = () => {
+    const initData: SimulationRow[] = referenceData.map(channel => ({
+      channel: channel.channel,
+      referenceBudget: channel.investment,
+      newBudget: channel.investment,
+      variation: 0,
+      roi: channel.roi,
+      expectedContribution: channel.investment * channel.roi,
+      color: channel.color
+    }));
+    setSimulationData(initData);
+    setIsValidated(false);
   };
-  
+
   // Calculate totals
-  const totalCurrentBudget = initialData.reduce((sum, channel) => sum + channel.currentBudget, 0);
-  const totalNewBudget = simulationData.reduce((sum, channel) => sum + channel.newBudget, 0);
-  
-  const totalCurrentRevenue = initialData.reduce((sum, channel) => sum + (channel.currentBudget * channel.expectedROI), 0);
-  const totalNewRevenue = simulationData.reduce((sum, channel) => sum + (channel.newBudget * channel.expectedROI), 0);
-  
-  const avgCurrentROI = totalCurrentRevenue / totalCurrentBudget;
-  const avgNewROI = totalNewRevenue / totalNewBudget;
-  
-  // Format currency - update to use Euro symbol
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('en-EU', {
-      style: 'currency',
-      currency: 'EUR',
-      notation: value >= 1000000 ? 'compact' : 'standard',
-      maximumFractionDigits: 1
-    }).format(value);
-  };
-  
-  // Format date
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-EU', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
-  };
+  const totalReferenceBudget = simulationData.reduce((sum, item) => sum + item.referenceBudget, 0);
+  const totalNewBudget = simulationData.reduce((sum, item) => sum + item.newBudget, 0);
+  const totalReferenceContribution = simulationData.reduce((sum, item) => sum + item.referenceBudget * item.roi, 0);
+  const totalNewContribution = simulationData.reduce((sum, item) => sum + item.expectedContribution, 0);
+  const totalVariation = ((totalNewBudget - totalReferenceBudget) / totalReferenceBudget) * 100;
 
-  // Prepare data for comparison chart
-  const comparisonChartData = simulationData.map(item => {
-    const initialChannel = initialData.find(c => c.channel === item.channel);
-    const channelData = filterData(filters.country, filters.brand, filters.dateRange).channelData
-      .find(c => c.channel === item.channel);
-    
-    return {
-      name: item.channel,
-      current: initialChannel?.currentBudget || 0,
-      new: item.newBudget,
-      color: channelData?.color || '#94a3b8'
-    };
-  });
-  
-  // Update the optimized budget data to include expected contribution and ROI
-  const optimizedBudget = [
-    { name: "TV", size: 125000, percentage: 35.7, contribution: 375000, roi: 3.0 },
-    { name: "Digital", size: 92000, percentage: 26.3, contribution: 331200, roi: 3.6 },
-    { name: "Radio", size: 48000, percentage: 13.7, contribution: 124800, roi: 2.6 },
-    { name: "Print", size: 18000, percentage: 5.1, contribution: 39600, roi: 2.2 },
-    { name: "CRM", size: 42000, percentage: 12.0, contribution: 189000, roi: 4.5 },
-    { name: "Promo", size: 25000, percentage: 7.2, contribution: 87500, roi: 3.5 }
-  ];
-  
-  // Render create simulation or optimization components if needed
-  if (showSimulation) {
+  if (!isStarted) {
     return (
-        <CreateSimulation 
-          onClose={() => setShowSimulation(false)} 
-          onComplete={handleAddScenario}
-        />
-    );
-  }
-
-  if (showOptimization) {
-    return (
-        <CreateOptimization 
-          onClose={() => setShowOptimization(false)}
-          onComplete={handleAddScenario}
-        />
-    );
-  }
-
-  // Render channel distribution for a selected scenario
-  const renderScenarioChannelDistribution = (scenario: any) => {
-    if (!scenario) return null;
-
-    const scenarioData = scenario.type === 'optimization' 
-      ? scenario.channels 
-      : scenario.levers.map((lever: any) => ({
-          name: lever.name,
-          size: lever.newBudget,
-          percentage: Math.round((lever.newBudget / scenario.totalBudget) * 100 * 10) / 10
-        }));
-
-    return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-lg shadow-lg w-full max-w-3xl max-h-[90vh] overflow-auto">
-          <div className="p-4 border-b flex justify-between items-center">
-            <h2 className="text-xl font-bold">{scenario.name} Details</h2>
-            <button onClick={closeScenarioDetails} className="text-gray-500 hover:text-gray-700">
-              <X size={20} />
-            </button>
-          </div>
-          
-          <div className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-              <div>
-                <p className="text-sm text-gray-500">Type</p>
-                <p className="font-medium capitalize">{scenario.type}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Status</p>
-                <p className="font-medium capitalize">{scenario.status}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">ROI</p>
-                <p className="font-medium">{scenario.roi}x</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Contribution</p>
-                <p className="font-medium">{formatCurrency(scenario.contribution)}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Total Budget</p>
-                <p className="font-medium">{formatCurrency(scenario.totalBudget)}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Timeframe</p>
-                <p className="font-medium">{scenario.timeframe}</p>
-              </div>
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <h1 className="text-2xl font-semibold text-slate-800">Budget Simulation</h1>
         </div>
 
-            <h3 className="text-lg font-medium mb-4">Channel Distribution</h3>
-            
-            <div className="h-80 mb-6">
-              <ResponsiveContainer width="100%" height="100%">
-                <Treemap
-                  data={scenarioData}
-                  dataKey="size"
-                  aspectRatio={4 / 3}
-                  stroke="#fff"
-                  content={<CustomizedContent />}
-                >
-                  <Tooltip 
-                    formatter={(value) => [`€${Number(value).toLocaleString()}`, "Budget"]}
-                    labelFormatter={(name) => `${name}`}
-                  />
-                </Treemap>
-              </ResponsiveContainer>
+        <div className="card bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200">
+          <div className="p-6">
+            <h2 className="text-xl font-semibold text-slate-800 mb-3">Start Simulation</h2>
+            <p className="text-slate-700 mb-4">
+              This simulation tool helps you plan your budget allocation for the next period based on historical performance.
+            </p>
+            <div className="space-y-2 text-sm text-slate-600 mb-6">
+              <p>• <strong>Reference Year:</strong> {latestYear}</p>
+              <p>• Input new budget allocations for each marketing channel</p>
+              <p>• Expected contributions are calculated using ROI from {latestYear}</p>
+              <p>• Compare the simulation results with the reference year's performance</p>
             </div>
-
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Channel</TableHead>
-                  <TableHead className="text-right">Budget</TableHead>
-                  <TableHead className="text-right">Percentage</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                {scenarioData.map((item: any, index: number) => (
-                    <TableRow key={index}>
-                      <TableCell className="font-medium">{item.name}</TableCell>
-                    <TableCell className="text-right">€{item.size.toLocaleString()}</TableCell>
-                    <TableCell className="text-right">{item.percentage}%</TableCell>
-                    </TableRow>
-                  ))}
-                  <TableRow className="bg-muted/50 font-medium">
-                    <TableCell>Total</TableCell>
-                  <TableCell className="text-right">€{scenarioData.reduce((sum: number, item: any) => sum + item.size, 0).toLocaleString()}</TableCell>
-                  <TableCell className="text-right">100%</TableCell>
-                  </TableRow>
-                </TableBody>
-              </Table>
-            </div>
+            <button
+              onClick={handleStartSimulation}
+              className="btn btn-primary"
+            >
+              Start Simulation
+            </button>
+          </div>
         </div>
       </div>
     );
-  };
+  }
+
+  if (!isValidated) {
+    return (
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <h1 className="text-2xl font-semibold text-slate-800">Budget Simulation</h1>
+          <button
+            onClick={() => { setIsStarted(false); handleReset(); }}
+            className="btn btn-secondary"
+          >
+            Reset
+          </button>
+        </div>
+
+        <div className="card">
+          <h3 className="text-lg font-medium mb-4">Input New Budgets (Reference Year: {latestYear})</h3>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="bg-slate-50 border-b">
+                  <th className="p-3 text-left text-sm font-semibold text-slate-700">Channel</th>
+                  <th className="p-3 text-right text-sm font-semibold text-slate-700">Reference Budget</th>
+                  <th className="p-3 text-right text-sm font-semibold text-slate-700">New Budget</th>
+                  <th className="p-3 text-right text-sm font-semibold text-slate-700">Variation</th>
+                  <th className="p-3 text-right text-sm font-semibold text-slate-700">Expected ROI</th>
+                  <th className="p-3 text-right text-sm font-semibold text-slate-700">Expected Contribution</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-200">
+                {simulationData.map((item, index) => (
+                  <tr key={index} className="hover:bg-slate-50">
+                    <td className="p-3">
+                      <ChannelColorBadge channel={item.channel} />
+                    </td>
+                    <td className="p-3 text-right text-sm">{(item.referenceBudget / 1000000).toFixed(1)}M</td>
+                    <td className="p-3">
+                      <input
+                        type="text"
+                        value={item.newBudget === item.referenceBudget ? (item.referenceBudget / 1000000).toFixed(1) : (item.newBudget / 1000000).toFixed(1)}
+                        onChange={(e) => {
+                          handleBudgetChange(item.channel, e.target.value);
+                        }}
+                        placeholder="Amount in M"
+                        className="w-full px-2 py-1 border rounded text-right placeholder:text-xs placeholder:text-slate-400"
+                      />
+                    </td>
+                    <td className={`p-3 text-right text-sm font-medium ${item.variation > 0 ? 'text-green-600' : item.variation < 0 ? 'text-red-600' : 'text-slate-600'
+                      }`}>
+                      {item.variation > 0 ? '+' : ''}{item.variation.toFixed(1)}%
+                    </td>
+                    <td className="p-3 text-right text-sm text-slate-600">
+                      {item.roi.toFixed(1)}x
+                    </td>
+                    <td className="p-3 text-right text-sm font-medium text-slate-700">
+                      {(item.expectedContribution / 1000000).toFixed(1)}M
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot className="bg-slate-50 border-t-2 border-slate-200">
+                <tr className="font-semibold">
+                  <td className="p-3">Total</td>
+                  <td className="p-3 text-right">{(totalReferenceBudget / 1000000).toFixed(1)}M</td>
+                  <td className="p-3 text-right">{(totalNewBudget / 1000000).toFixed(1)}M</td>
+                  <td className={`p-3 text-right ${totalVariation > 0 ? 'text-green-600' : totalVariation < 0 ? 'text-red-600' : 'text-slate-600'
+                    }`}>
+                    {totalVariation > 0 ? '+' : ''}{totalVariation.toFixed(1)}%
+                  </td>
+                  <td className="p-3 text-right">
+                    {(totalNewContribution / totalNewBudget).toFixed(1)}x
+                  </td>
+                  <td className="p-3 text-right">{(totalNewContribution / 1000000).toFixed(1)}M</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+
+          <div className="mt-6 flex justify-end">
+            <button
+              onClick={handleValidate}
+              className="btn btn-primary flex items-center gap-2"
+            >
+              <CheckCircle size={18} />
+              Validate Simulation
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show results after validation
+  const comparisonData = simulationData.map(item => ({
+    name: item.channel,
+    referenceBudget: item.referenceBudget,
+    newBudget: item.newBudget,
+    referenceContribution: item.referenceBudget * item.roi,
+    newContribution: item.expectedContribution,
+    color: item.color
+  }));
+
+  const contributionData = simulationData.map(item => ({
+    name: item.channel,
+    reference: item.referenceBudget * item.roi,
+    new: item.expectedContribution,
+    color: item.color
+  }));
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-semibold text-slate-800">Budget Simulations</h1>
+        <h1 className="text-2xl font-semibold text-slate-800">Simulation Results</h1>
+        <button
+          onClick={() => { handleReset(); setIsValidated(false); }}
+          className="btn btn-secondary"
+        >
+          New Simulation
+        </button>
       </div>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="border rounded-lg bg-white p-6 shadow-sm flex flex-col h-auto">
-          <div className="mb-4">
-            <h3 className="text-lg font-medium mb-2">Create New Simulation</h3>
-            <p className="text-sm text-slate-600 mb-4">
-              Run a what-if analysis based on different budget allocations
-            </p>
-            <ul className="list-disc pl-5 text-sm text-slate-500 space-y-1 mb-4">
-              <li>Simulate different budget scenarios without constraints</li>
-              <li>See how changing your budget allocation affects your overall marketing performance</li>
-              <li>Test incremental investments across channels</li>
-              <li>Recalculate contributions on the fly</li>
-              <li>Compare up to 5 scenarios at once</li>
-            </ul>
-          </div>
-          <Button 
-            className="mt-auto w-full"
-            onClick={() => setShowSimulation(true)}
-          >
-            <Play size={16} className="mr-2" /> Start Simulation
-          </Button>
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="card">
+          <h3 className="text-sm font-medium text-slate-500 mb-2">Total Budget Variation</h3>
+          <p className={`text-2xl font-bold ${totalVariation >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+            {totalVariation >= 0 ? '+' : ''}{totalVariation.toFixed(1)}%
+          </p>
         </div>
-        
-        <div className="border rounded-lg bg-white p-6 shadow-sm flex flex-col h-auto">
-          <div className="mb-4">
-            <h3 className="text-lg font-medium mb-2">Run Optimization</h3>
-            <p className="text-sm text-slate-600 mb-4">
-              Let AI optimize your budget allocation for maximum performance
-            </p>
-            <ul className="list-disc pl-5 text-sm text-slate-500 space-y-1 mb-4">
-              <li>Simulate different budget scenarios without constraints</li>
-              <li>See how changing your budget allocation affects your overall marketing performance</li>
-              <li>Test incremental investments across channels</li>
-              <li>Recalculate contributions on the fly</li>
-              <li>Compare up to 5 scenarios at once</li>
-            </ul>
-          </div>
-          <Button 
-            className="mt-auto w-full"
-            variant="primary"
-            onClick={() => setShowOptimization(true)}
-          >
-            <Zap size={16} className="mr-2" /> Start Optimization
-          </Button>
+        <div className="card">
+          <h3 className="text-sm font-medium text-slate-500 mb-2">Expected Contribution</h3>
+          <p className="text-2xl font-bold text-slate-800">{(totalNewContribution / 1000000).toFixed(1)}M</p>
+          <p className="text-xs text-slate-500 mt-1">
+            {((totalNewContribution - totalReferenceContribution) / totalReferenceContribution * 100).toFixed(1)}% vs {latestYear}
+          </p>
+        </div>
+        <div className="card">
+          <h3 className="text-sm font-medium text-slate-500 mb-2">Average ROI</h3>
+          <p className="text-2xl font-bold text-slate-800">
+            {(totalNewContribution / totalNewBudget).toFixed(1)}x
+          </p>
+        </div>
+        <div className="card">
+          <h3 className="text-sm font-medium text-slate-500 mb-2">Total New Budget</h3>
+          <p className="text-2xl font-bold text-slate-800">{(totalNewBudget / 1000000).toFixed(1)}M</p>
         </div>
       </div>
 
-      {/* Always show scenarios table, even if empty */}
-      <div className="border rounded-lg bg-white p-4 shadow-sm">
-        <h3 className="text-lg font-medium mb-4">Your Scenarios</h3>
-        <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Status</TableHead>
-                <TableHead>ROI</TableHead>
-                <TableHead>Contribution</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-              {scenarios.length > 0 ? (
-                scenarios.map((scenario, index) => (
-                  <TableRow key={index}>
-                    <TableCell className="font-medium">{scenario.name}</TableCell>
-                    <TableCell className="capitalize">{scenario.type}</TableCell>
-                    <TableCell className="capitalize">{scenario.status}</TableCell>
-                    <TableCell>{scenario.roi}x</TableCell>
-                    <TableCell>{formatCurrency(scenario.contribution)}</TableCell>
-                    <TableCell>{formatDate(scenario.date)}</TableCell>
-                    <TableCell className="text-right">
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => handleViewScenario(scenario)} 
-                        className="flex items-center gap-1"
-                      >
-                        <Eye size={16} /> View
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center py-6 text-slate-500">
-                    No scenarios created yet. Create a simulation or run an optimization to get started.
-                  </TableCell>
-                </TableRow>
-              )}
-              </TableBody>
-            </Table>
-        </div>
-      </div>
-      
-      {/* Show scenario details modal if a scenario is selected */}
-      {showScenarioDetails && selectedScenario && renderScenarioChannelDistribution(selectedScenario)}
-      
-      {/* Optimized Budget Allocation card */}
-      <Card className="bg-white">
-          <CardHeader>
-            <CardTitle>Optimized Budget Allocation</CardTitle>
-            <CardDescription>
-              Recommended budget distribution based on best performing scenario
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-          <div className="h-80 mb-6">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={optimizedBudget}
-                margin={{ top: 20, right: 20, left: 20, bottom: 20 }}
-              >
+      {/* Comparison Charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="card">
+          <h3 className="text-lg font-medium mb-4">Budget Comparison: {latestYear} vs Simulation</h3>
+          <div className="h-96">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={comparisonData} margin={{ bottom: Math.max(80, comparisonData.length * 5) }}>
                 <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                {/* Single Y axis with Euro values */}
-                <YAxis 
-                  label={{ value: 'Amount (€)', angle: -90, position: 'insideLeft' }} 
-                  tickFormatter={(value) => `€${value >= 1000 ? `${value/1000}k` : value}`}
+                <XAxis
+                  dataKey="name"
+                  angle={-45}
+                  textAnchor="end"
+                  height={Math.max(80, comparisonData.length * 8)}
+                  tick={{ fontSize: 11 }}
+                  interval={0}
                 />
-                <Tooltip formatter={(value) => [`€${Number(value).toLocaleString()}`, '']} />
-                  <Legend />
-                <Bar dataKey="size" name="Budget" fill="#3B82F6" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="contribution" name="Expected Contribution" fill="#10B981" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Channel</TableHead>
-                  <TableHead className="text-right">Budget (€)</TableHead>
-                  <TableHead className="text-right">Expected Contribution (€)</TableHead>
-                  <TableHead className="text-right">ROI (multiple)</TableHead>
-                  <TableHead className="text-right">Percentage (%)</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {optimizedBudget.map((item, index) => (
-                    <TableRow key={index}>
-                      <TableCell className="font-medium">{item.name}</TableCell>
-                    <TableCell className="text-right">€{item.size.toLocaleString()}</TableCell>
-                      <TableCell className="text-right">€{item.contribution.toLocaleString()}</TableCell>
-                    <TableCell className="text-right">{item.roi}x</TableCell>
-                      <TableCell className="text-right">{item.percentage}%</TableCell>
-                    </TableRow>
+                <YAxis tickFormatter={(value) => formatNumberAxis(value)} />
+                <Tooltip
+                  content={({ active, payload }) => {
+                    if (active && payload && payload.length) {
+                      return (
+                        <div style={{ backgroundColor: 'white', border: '1px solid #e2e8f0', padding: '10px', borderRadius: '4px' }}>
+                          <p style={{ color: '#64748b', marginBottom: '5px' }}>{payload[0].payload.name}</p>
+                          {payload.map((entry, index) => (
+                            <p key={index} style={{ color: entry.color, margin: '2px 0' }}>
+                              {entry.name === 'referenceBudget' ? `${latestYear}` : 'Simulation'}: {formatNumberDetailed(entry.value as number)}
+                            </p>
+                          ))}
+                        </div>
+                      );
+                    }
+                    return null;
+                  }}
+                />
+                <Legend />
+                <Bar dataKey="referenceBudget" name={`${latestYear}`} fill="#94a3b8" />
+                <Bar dataKey="newBudget" name="Simulation">
+                  {comparisonData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
-                  <TableRow className="bg-muted/50 font-medium">
-                    <TableCell>Total</TableCell>
-                  <TableCell className="text-right">€{optimizedBudget.reduce((sum, item) => sum + item.size, 0).toLocaleString()}</TableCell>
-                    <TableCell className="text-right">€{optimizedBudget.reduce((sum, item) => sum + item.contribution, 0).toLocaleString()}</TableCell>
-                  <TableCell className="text-right">{(optimizedBudget.reduce((sum, item) => sum + item.contribution, 0) / optimizedBudget.reduce((sum, item) => sum + item.size, 0)).toFixed(1)}x</TableCell>
-                    <TableCell className="text-right">100%</TableCell>
-                  </TableRow>
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        <div className="card">
+          <h3 className="text-lg font-medium mb-4">Expected Contribution Comparison</h3>
+          <div className="h-96">
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart data={contributionData} margin={{ bottom: Math.max(80, contributionData.length * 5) }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis
+                  dataKey="name"
+                  angle={-45}
+                  textAnchor="end"
+                  height={Math.max(80, contributionData.length * 8)}
+                  tick={{ fontSize: 11 }}
+                  interval={0}
+                />
+                <YAxis tickFormatter={(value) => formatNumberAxis(value)} />
+                <Tooltip
+                  content={({ active, payload }) => {
+                    if (active && payload && payload.length) {
+                      return (
+                        <div style={{ backgroundColor: 'white', border: '1px solid #e2e8f0', padding: '10px', borderRadius: '4px' }}>
+                          <p style={{ color: '#64748b', marginBottom: '5px' }}>{payload[0].payload.name}</p>
+                          {payload.map((entry, index) => (
+                            <p key={index} style={{ color: entry.color, margin: '2px 0' }}>
+                              {entry.name === 'reference' ? `${latestYear}` : 'Simulation'}: {formatNumberDetailed(entry.value as number)}
+                            </p>
+                          ))}
+                        </div>
+                      );
+                    }
+                    return null;
+                  }}
+                />
+                <Legend />
+                <Bar dataKey="reference" name={`${latestYear} Contribution`} fill="#94a3b8" />
+                <Bar dataKey="new" name="Simulated Contribution">
+                  {contributionData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Bar>
+              </ComposedChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
+
+      {/* Detailed Results Table */}
+      <div className="card">
+        <h3 className="text-lg font-medium mb-4">Detailed Results</h3>
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="bg-slate-50 border-b">
+                <th className="p-3 text-left text-sm font-semibold text-slate-700">Channel</th>
+                <th className="p-3 text-right text-sm font-semibold text-slate-700">Budget Change</th>
+                <th className="p-3 text-right text-sm font-semibold text-slate-700">Contribution Change</th>
+                <th className="p-3 text-right text-sm font-semibold text-slate-700">ROI (x)</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-200">
+              {simulationData.map((item, index) => (
+                <tr key={index} className="hover:bg-slate-50">
+                  <td className="p-3">
+                    <ChannelColorBadge channel={item.channel} />
+                  </td>
+                  <td className={`p-3 text-right text-sm font-medium ${item.variation > 0 ? 'text-green-600' : item.variation < 0 ? 'text-red-600' : 'text-slate-600'
+                    }`}>
+                    {((item.newBudget - item.referenceBudget) / 1000000).toFixed(1)}M ({item.variation >= 0 ? '+' : ''}{item.variation.toFixed(1)}%)
+                  </td>
+                  <td className={`p-3 text-right text-sm font-medium ${(item.expectedContribution - item.referenceBudget * item.roi) > 0 ? 'text-green-600' : (item.expectedContribution - item.referenceBudget * item.roi) < 0 ? 'text-red-600' : 'text-slate-600'
+                    }`}>
+                    {(() => {
+                      const oldContribution = item.referenceBudget * item.roi;
+                      const newContribution = item.expectedContribution;
+                      const contributionChange = newContribution - oldContribution;
+                      const contributionPercentage = oldContribution > 0
+                        ? ((contributionChange / oldContribution) * 100).toFixed(1)
+                        : '0.0';
+                      return `${(contributionChange / 1000000).toFixed(1)}M (${contributionChange >= 0 ? '+' : ''}${contributionPercentage}%)`;
+                    })()}
+                  </td>
+                  <td className="p-3 text-right text-sm text-slate-600">
+                    {item.roi.toFixed(1)}x
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   );
 };

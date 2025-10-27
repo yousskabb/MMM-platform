@@ -1,23 +1,40 @@
-// Predefined color palette for consistent variable coloring
-const COLOR_PALETTE = [
+// Predefined color palette for specific variables
+const VARIABLE_COLORS: { [key: string]: string } = {
+    'TV': '#1F77B4',              // medium blue
+    'Radio': '#4FA3DB',           // light-medium blue
+    'Press': '#A7CBEF',           // light blue
+    'OOH': '#2B6CB0',             // deep blue
+    'DOOH': '#2B6CB0',            // deep blue (same as OOH)
+    'Display': '#1B4F72',         // dark blue
+    'Video': '#2F80ED',           // bright blue
+    'Social Media': '#0B63B6',    // digital blue
+    'Affiliation': '#118AB2',     // blue-teal accent
+    'SEO': '#2F9E44',             // organic green
+    'Direct Discount': '#C62828', // strong promo red
+    'BOGOF': '#E53935',           // bright promo red
+    'Card': '#B71C1C',            // deep promo red
+    'Gifts': '#F0625D',           // soft coral-red
+    'EDM': '#FB8C00',             // amber/orange
+    'Email': '#FB8C00',           // amber/orange (same as EDM)
+    'DM': '#EF6C00',              // burnt orange
+    'Direct Mail': '#EF6C00',     // burnt orange (same as DM)
+    'Baseline': '#9E9E9E',        // neutral gray
+    'Controls': '#9E9E9E',        // neutral gray
+    'Seasonality': '#9E9E9E',     // neutral gray
+    'Base': '#9E9E9E',            // neutral gray
+    'Sales': '#9E9E9E',           // neutral gray
+};
+
+// Fallback color palette for variables not in the predefined list
+const FALLBACK_PALETTE = [
     '#8884d8', // Purple
     '#55B78D', // Green
     '#82ca9d', // Light Green
     '#ffc658', // Orange
     '#ff8042', // Red Orange
-    '#0088fe', // Blue
     '#00C49F', // Teal
     '#FFBB28', // Yellow
     '#FF7300', // Dark Orange
-    '#8884d8', // Purple (duplicate for cycling)
-    '#55B78D', // Green (duplicate for cycling)
-    '#82ca9d', // Light Green (duplicate for cycling)
-    '#ffc658', // Orange (duplicate for cycling)
-    '#ff8042', // Red Orange (duplicate for cycling)
-    '#0088fe', // Blue (duplicate for cycling)
-    '#00C49F', // Teal (duplicate for cycling)
-    '#FFBB28', // Yellow (duplicate for cycling)
-    '#FF7300', // Dark Orange (duplicate for cycling)
 ];
 
 // Cache for variable colors to maintain consistency
@@ -33,17 +50,24 @@ export function getVariableColor(variableName: string): string {
         return colorCache.get(variableName)!;
     }
 
-    // Simple hash function to generate consistent color index
-    let hash = 0;
-    for (let i = 0; i < variableName.length; i++) {
-        const char = variableName.charCodeAt(i);
-        hash = ((hash << 5) - hash) + char;
-        hash = hash & hash; // Convert to 32-bit integer
-    }
+    let color: string;
 
-    // Use absolute value and modulo to get index
-    const colorIndex = Math.abs(hash) % COLOR_PALETTE.length;
-    const color = COLOR_PALETTE[colorIndex];
+    // Check if variable has a predefined color
+    if (VARIABLE_COLORS[variableName]) {
+        color = VARIABLE_COLORS[variableName];
+    } else {
+        // Use hash function for fallback colors
+        let hash = 0;
+        for (let i = 0; i < variableName.length; i++) {
+            const char = variableName.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash; // Convert to 32-bit integer
+        }
+
+        // Use absolute value and modulo to get index
+        const colorIndex = Math.abs(hash) % FALLBACK_PALETTE.length;
+        color = FALLBACK_PALETTE[colorIndex];
+    }
 
     // Cache the color for this variable
     colorCache.set(variableName, color);
