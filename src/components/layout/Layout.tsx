@@ -11,8 +11,7 @@ import SimulationsTab from '../tabs/SimulationsTab';
 import ChatTab from '../tabs/ChatTab';
 import ResponseCurvesTab from '../tabs/ResponseCurvesTab';
 import DataTab from '../tabs/DataTab';
-import { loadExcelData, getAvailableDateRange, getAvailableYears, isDataLoaded, isDataLoading } from '../../data/dataService';
-import DebugExcel from '../DebugExcel';
+import { loadExcelData, getAvailableYears } from '../../data/dataService';
 
 type Tab = 'recap' | 'synergies' | 'roi' | 'budget' | 'simulations' | 'response' | 'chat' | 'data';
 
@@ -159,17 +158,7 @@ const Layout: React.FC = () => {
         <FilterBar filters={filters} onFilterChange={handleFilterChange} />
         <main className="flex-1 overflow-y-auto p-6">
           <div className="max-w-screen-xl mx-auto">
-            <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-              <h3 className="font-semibold text-yellow-800">Debug Information</h3>
-              <p className="text-sm text-yellow-700">Loading: {loading ? 'Yes' : 'No'} | Data Loaded: {dataLoaded ? 'Yes' : 'No'} | Error: {error || 'None'}</p>
-            </div>
-            <DebugExcel />
-            {dataLoaded && !loading ? renderTabContent() : (
-              <div className="text-center py-12">
-                <p className="text-slate-500">Data is being prepared...</p>
-                <p className="text-sm text-slate-400 mt-2">Loading Excel data...</p>
-              </div>
-            )}
+            {dataLoaded && !loading ? renderTabContent() : null}
             <footer className="mt-8 text-center text-sm text-slate-500">
               © 2025 All rights reserved. Powered by eleven strategy.
             </footer>

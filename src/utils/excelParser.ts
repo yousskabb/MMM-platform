@@ -23,21 +23,16 @@ export interface ExcelSheetData {
  */
 export function parseExcelFile(filePath: string): Promise<ParsedExcelData> {
     return new Promise((resolve, reject) => {
-        console.log(`Fetching Excel file from: ${filePath}`);
-
         fetch(filePath)
             .then(response => {
-                console.log('Fetch response status:', response.status);
                 if (!response.ok) {
                     throw new Error(`Failed to fetch Excel file: ${response.status} ${response.statusText}`);
                 }
                 return response.arrayBuffer();
             })
             .then(data => {
-                console.log('Excel file fetched, size:', data.byteLength);
                 try {
                     const workbook = XLSX.read(data, { type: 'array' });
-                    console.log('Excel workbook parsed, sheet names:', workbook.SheetNames);
 
                     // Get the Investments and Contributions sheets
                     const investmentsSheet = workbook.Sheets['Investments'];
@@ -51,22 +46,14 @@ export function parseExcelFile(filePath: string): Promise<ParsedExcelData> {
                     const investmentsData = XLSX.utils.sheet_to_json<ExcelSheetData>(investmentsSheet);
                     const contributionsData = XLSX.utils.sheet_to_json<ExcelSheetData>(contributionsSheet);
 
-                    console.log('Investments data rows:', investmentsData.length);
-                    console.log('Contributions data rows:', contributionsData.length);
-                    console.log('Sample investments data:', investmentsData[0]);
-                    console.log('Sample contributions data:', contributionsData[0]);
-
                     // Parse the data
                     const result = parseExcelData(investmentsData, contributionsData);
-                    console.log('Parsed result:', result);
                     resolve(result);
                 } catch (error) {
-                    console.error('Error parsing Excel data:', error);
                     reject(error);
                 }
             })
             .catch(error => {
-                console.error('Error fetching Excel file:', error);
                 reject(error);
             });
     });
@@ -91,11 +78,9 @@ function parseExcelData(
     );
 
     // Parse investment data (filter out empty rows)
-    console.log('Filtering investment data, total rows:', investmentsData.length);
     const investments = investmentsData
         .filter(row => {
             const hasDate = row.Date || row.date || row.Dates;
-            if (!hasDate) console.log('Skipping row without date:', row);
             return hasDate;
         }) // Only process rows with dates
         .map(row => {
@@ -109,8 +94,6 @@ function parseExcelData(
 
             return parsedRow;
         });
-
-    console.log('Parsed investments:', investments.length, 'rows');
 
     // Parse contribution data (filter out empty rows)
     const contributions = contributionsData
@@ -136,14 +119,6 @@ function parseExcelData(
         max: new Date(Math.max(...allDates.map(d => d.getTime())))
     };
 
-    // Debug: Log the date range and years
-    console.log('Date range from Excel data:', {
-        min: dateRange.min.toISOString().split('T')[0],
-        max: dateRange.max.toISOString().split('T')[0],
-        minYear: dateRange.min.getFullYear(),
-        maxYear: dateRange.max.getFullYear()
-    });
-
     return {
         investments,
         contributions,
@@ -157,7 +132,6 @@ function parseExcelData(
  */
 function parseDate(dateValue: any): Date {
     if (!dateValue) {
-        console.warn('Empty date value found, skipping row');
         return new Date(); // Return current date as fallback
     }
 
@@ -170,11 +144,9 @@ function parseDate(dateValue: any): Date {
         const date = new Date(excelEpoch.getTime() + daysSinceEpoch * 24 * 60 * 60 * 1000);
 
         if (isNaN(date.getTime())) {
-            console.warn(`Invalid Excel serial number: ${dateValue}, using current date`);
             return new Date();
         }
 
-        console.log(`Converted Excel serial ${dateValue} to date: ${date.toISOString().split('T')[0]} (Year: ${date.getFullYear()})`);
         return date;
     }
 
@@ -186,7 +158,6 @@ function parseDate(dateValue: any): Date {
         const datePart = str.split(' ')[0];
         const date = new Date(datePart);
         if (isNaN(date.getTime())) {
-            console.warn(`Invalid date format: ${str}, using current date`);
             return new Date();
         }
         return date;
@@ -195,7 +166,6 @@ function parseDate(dateValue: any): Date {
     // If it's already a valid date
     const date = new Date(str);
     if (isNaN(date.getTime())) {
-        console.warn(`Invalid date format: ${str}, using current date`);
         return new Date();
     }
 
@@ -214,43 +184,11 @@ export function filterDataByDateRange(
     const startDateOnly = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
     const endDateOnly = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
 
-    console.log('Filtering data by date range:', {
-        startDate: startDateOnly.toISOString().split('T')[0],
-        endDate: endDateOnly.toISOString().split('T')[0],
-        startDateTimestamp: startDateOnly.getTime(),
-        endDateTimestamp: endDateOnly.getTime(),
-        totalDataPoints: data.length,
-        firstDataPoint: data[0]?.date.toISOString().split('T')[0],
-        lastDataPoint: data[data.length - 1]?.date.toISOString().split('T')[0],
-        firstDataPointTimestamp: data[0]?.date.getTime(),
-        lastDataPointTimestamp: data[data.length - 1]?.date.getTime()
-    });
-
     const filtered = data.filter(item => {
         const itemDateOnly = new Date(item.date.getFullYear(), item.date.getMonth(), item.date.getDate());
         const isInRange = itemDateOnly >= startDateOnly && itemDateOnly <= endDateOnly;
-
-        // Debug logging for edge cases
-        if (itemDateOnly.getTime() === endDateOnly.getTime()) {
-            console.log('End date match found:', {
-                itemDate: itemDateOnly.toISOString().split('T')[0],
-                endDate: endDateOnly.toISOString().split('T')[0],
-                isInRange: isInRange
-            });
-        }
-
-        if (!isInRange && itemDateOnly.getTime() === endDateOnly.getTime()) {
-            console.log('End date match found but filtered out:', itemDateOnly.toISOString().split('T')[0]);
-        }
-
         return isInRange;
     });
-
-    console.log('Filtered data points:', filtered.length);
-    if (filtered.length > 0) {
-        console.log('First filtered point:', filtered[0].date.toISOString().split('T')[0]);
-        console.log('Last filtered point:', filtered[filtered.length - 1].date.toISOString().split('T')[0]);
-    }
 
     return filtered;
 }

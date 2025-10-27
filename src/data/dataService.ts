@@ -44,11 +44,8 @@ export async function loadExcelData(): Promise<void> {
 
     try {
         // Load Excel file from public/data folder
-        console.log('Attempting to load Excel file from /data/data.xlsx');
         cachedData = await parseExcelFile('/data/data.xlsx');
-        console.log('Excel data loaded successfully:', cachedData);
     } catch (error) {
-        console.error('Failed to load Excel data:', error);
         throw error;
     } finally {
         isLoading = false;
@@ -67,21 +64,9 @@ export function filterDataByYear(year: number): YearlyData {
     const startDate = new Date(year, 0, 1); // January 1st
     const endDate = new Date(year, 11, 31); // December 31st
 
-    console.log(`Filtering data for year ${year}:`, {
-        startDate: startDate.toISOString(),
-        endDate: endDate.toISOString(),
-        totalInvestments: cachedData.investments.length,
-        totalContributions: cachedData.contributions.length
-    });
-
     // Filter investment and contribution data by year
     const filteredInvestments = filterDataByDateRange(cachedData.investments, startDate, endDate);
     const filteredContributions = filterDataByDateRange(cachedData.contributions, startDate, endDate);
-
-    console.log(`Filtered data for year ${year}:`, {
-        filteredInvestments: filteredInvestments.length,
-        filteredContributions: filteredContributions.length
-    });
 
     // Aggregate data by variable
     const investmentTotals = aggregateDataByVariable(filteredInvestments, cachedData.variables);
@@ -340,7 +325,6 @@ export function getAvailableYears(): number[] {
 
     // Convert to array and sort
     const availableYears = Array.from(years).sort((a, b) => a - b);
-    console.log('Available years in Excel data:', availableYears);
     return availableYears;
 }
 

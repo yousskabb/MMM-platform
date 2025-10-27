@@ -74,7 +74,6 @@ const DataTab: React.FC<DataTabProps> = ({ filters }) => {
                         <thead className="bg-slate-50">
                             <tr>
                                 <th className="px-4 py-3 text-left text-sm font-medium text-slate-700">Channel</th>
-                                <th className="px-4 py-3 text-left text-sm font-medium text-slate-700">Media Type</th>
                                 <th className="px-4 py-3 text-left text-sm font-medium text-slate-700">Investment</th>
                                 <th className="px-4 py-3 text-left text-sm font-medium text-slate-700">Contribution</th>
                                 <th className="px-4 py-3 text-left text-sm font-medium text-slate-700">ROI</th>
@@ -84,7 +83,6 @@ const DataTab: React.FC<DataTabProps> = ({ filters }) => {
                             {channelData.map((channel) => (
                                 <tr key={channel.channel}>
                                     <td className="px-4 py-3 text-sm font-medium text-slate-800">{channel.channel}</td>
-                                    <td className="px-4 py-3 text-sm text-slate-600">{channel.mediaType}</td>
                                     <td className="px-4 py-3 text-sm text-slate-600">{formatCurrency(channel.investment)}</td>
                                     <td className="px-4 py-3 text-sm text-slate-600">{formatCurrency(channel.contribution)}</td>
                                     <td className="px-4 py-3 text-sm text-slate-600">{channel.roi.toFixed(2)}x</td>

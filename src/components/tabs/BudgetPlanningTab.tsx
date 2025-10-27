@@ -260,21 +260,6 @@ const BudgetPlanningTab: React.FC<BudgetPlanningTabProps> = ({ filters }) => {
           </table>
         </div>
       </div>
-
-      <div className="card bg-slate-50 border border-slate-200">
-        <h3 className="text-lg font-medium mb-3">Planning Insights</h3>
-        <div className="space-y-3">
-          <p className="text-sm text-slate-700">
-            <span className="font-semibold">Budget Shift:</span> The data shows a trend toward {totalVariation > 0 ? 'increasing' : 'decreasing'} overall media investment by {Math.abs(totalVariation).toFixed(1)}% from {previousYear} to {currentYear}.
-          </p>
-          <p className="text-sm text-slate-700">
-            <span className="font-semibold">Channel Prioritization:</span> The largest proportional increases are in {[...chartData].sort((a, b) => b.variation - a.variation)[0]?.name} and {[...chartData].sort((a, b) => b.variation - a.variation)[1]?.name}, suggesting strategic focus on these channels.
-          </p>
-          <p className="text-sm text-slate-700">
-            <span className="font-semibold">Reduced Investment:</span> {chartData.filter(item => item.variation < 0).length} channels show decreased investment, with {[...chartData].sort((a, b) => a.variation - b.variation)[0]?.name} seeing the largest reduction.
-          </p>
-        </div>
-      </div>
     </div>
   );
 };
