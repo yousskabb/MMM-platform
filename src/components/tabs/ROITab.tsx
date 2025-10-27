@@ -259,7 +259,7 @@ const ROITab: React.FC<ROITabProps> = ({ filters }) => {
             </tbody>
             <tfoot>
               <tr className="bg-slate-50 font-semibold border-t-2 border-slate-200">
-                <td className="p-3">Total / Average</td>
+                <td className="p-3">Total</td>
                 <td className="p-3 text-right">{formatNumber(totalInvestment)}</td>
                 <td className="p-3 text-right">{formatNumber(totalRevenue)}</td>
                 <td className="p-3 text-right">{avgROI.toFixed(2)}x</td>
