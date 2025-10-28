@@ -162,13 +162,32 @@ const LLMContextTab: React.FC<LLMContextTabProps> = ({ filters }) => {
                 </div>
 
 
-                {/* Variables */}
-                <div className="bg-white rounded-lg border border-slate-200 p-4">
-                    <h3 className="text-lg font-medium text-slate-800 mb-3">Available Variables</h3>
-                    <div className="text-sm text-slate-600">
-                        {context.variables?.join(', ') || 'No variables available'}
-                    </div>
-                </div>
+        {/* Correlations */}
+        {context.correlations && (
+          <div className="bg-white rounded-lg border border-slate-200 p-4">
+            <h3 className="text-lg font-medium text-slate-800 mb-3">
+              Channel Correlations (Year {context.correlations.year})
+            </h3>
+            <div className="text-sm text-slate-600">
+              {Object.entries(context.correlations.data)
+                .filter(([_, corr]: [string, any]) => Math.abs(corr) > 0.3)
+                .map(([pair, corr]: [string, any]) => (
+                  <div key={pair} className="flex justify-between">
+                    <span>{pair.replace('_', ' & ')}</span>
+                    <span className="font-medium">{corr.toFixed(2)}</span>
+                  </div>
+                ))}
+            </div>
+          </div>
+        )}
+
+        {/* Variables */}
+        <div className="bg-white rounded-lg border border-slate-200 p-4">
+          <h3 className="text-lg font-medium text-slate-800 mb-3">Available Variables</h3>
+          <div className="text-sm text-slate-600">
+            {context.variables?.join(', ') || 'No variables available'}
+          </div>
+        </div>
 
                 {/* Raw JSON Context */}
                 <div className="bg-slate-50 rounded-lg border border-slate-200 p-4">

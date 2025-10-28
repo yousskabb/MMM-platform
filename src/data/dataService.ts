@@ -413,40 +413,40 @@ export function getLLMContext(filters: FilterState): any {
     const totalContribution = yearlyData.channelData.reduce((sum, ch) => sum + ch.contribution, 0);
     const totalROI = totalInvestment > 0 ? totalContribution / totalInvestment : 0;
 
-       // Get data for all available years
-       const allYearsData = availableYears.map(year => {
-           const yearData = filterDataByYear(year);
-           const yearInvestment = yearData.channelData.reduce((sum, ch) => sum + ch.investment, 0);
-           const yearContribution = yearData.channelData.reduce((sum, ch) => sum + ch.contribution, 0);
-           const yearROI = yearInvestment > 0 ? yearContribution / yearInvestment : 0;
-           const yearSellOut = yearData.contributions.reduce((sum, week) => sum + (week.sales || 0), 0);
-           
-           return {
-               year,
-               totalInvestment: yearInvestment,
-               totalContribution: yearContribution,
-               totalROI: yearROI,
-               totalSellOut: yearSellOut,
-               channelPerformance: yearData.channelData.map(channel => ({
-                   channel: channel.channel,
-                   investment: channel.investment,
-                   contribution: channel.contribution,
-                   roi: channel.roi,
-                   mediaType: channel.mediaType
-               })),
-               monthlyPerformance: yearData.monthlyData.reduce((acc, item) => {
-                   if (!acc[item.channel]) {
-                       acc[item.channel] = {};
-                   }
-                   acc[item.channel][item.month] = {
-                       investment: item.investment,
-                       contribution: item.contribution,
-                       roi: item.roi
-                   };
-                   return acc;
-               }, {} as any)
-           };
-       });
+    // Get data for all available years
+    const allYearsData = availableYears.map(year => {
+        const yearData = filterDataByYear(year);
+        const yearInvestment = yearData.channelData.reduce((sum, ch) => sum + ch.investment, 0);
+        const yearContribution = yearData.channelData.reduce((sum, ch) => sum + ch.contribution, 0);
+        const yearROI = yearInvestment > 0 ? yearContribution / yearInvestment : 0;
+        const yearSellOut = yearData.contributions.reduce((sum, week) => sum + (week.sales || 0), 0);
+
+        return {
+            year,
+            totalInvestment: yearInvestment,
+            totalContribution: yearContribution,
+            totalROI: yearROI,
+            totalSellOut: yearSellOut,
+            channelPerformance: yearData.channelData.map(channel => ({
+                channel: channel.channel,
+                investment: channel.investment,
+                contribution: channel.contribution,
+                roi: channel.roi,
+                mediaType: channel.mediaType
+            })),
+            monthlyPerformance: yearData.monthlyData.reduce((acc, item) => {
+                if (!acc[item.channel]) {
+                    acc[item.channel] = {};
+                }
+                acc[item.channel][item.month] = {
+                    investment: item.investment,
+                    contribution: item.contribution,
+                    roi: item.roi
+                };
+                return acc;
+            }, {} as any)
+        };
+    });
 
     // Get previous year data for comparison
     const prevYear = filters.selectedYear - 1;
@@ -475,31 +475,22 @@ export function getLLMContext(filters: FilterState): any {
         // All Years Data
         allYearsData,
 
-       // Selected Year Channel Performance
-       selectedYearChannelPerformance: yearlyData.channelData.map(channel => ({
-           channel: channel.channel,
-           investment: channel.investment,
-           contribution: channel.contribution,
-           roi: channel.roi,
-           mediaType: channel.mediaType
-       })),
-
-        // Selected Year Monthly Performance
-        selectedYearMonthlyPerformance: yearlyData.monthlyData.reduce((acc, item) => {
-            if (!acc[item.channel]) {
-                acc[item.channel] = {};
-            }
-            acc[item.channel][item.month] = {
-                investment: item.investment,
-                contribution: item.contribution,
-                roi: item.roi
-            };
-            return acc;
-        }, {} as any),
+        // Selected Year Channel Performance
+        selectedYearChannelPerformance: yearlyData.channelData.map(channel => ({
+            channel: channel.channel,
+            investment: channel.investment,
+            contribution: channel.contribution,
+            roi: channel.roi,
+            mediaType: channel.mediaType
+        })),
 
 
-        // Correlation Matrix (if available)
-        correlations: yearlyData.variables.length > 0 ? calculateCorrelations(yearlyData.contributions, yearlyData.variables) : null,
+
+        // Correlation Matrix (if available) - for selected year only
+        correlations: yearlyData.variables.length > 0 ? {
+            year: filters.selectedYear,
+            data: calculateCorrelations(yearlyData.contributions, yearlyData.variables)
+        } : null,
 
         // Weekly Trends
         weeklyTrends: {

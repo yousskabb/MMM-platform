@@ -2,24 +2,24 @@ import { getLLMContext } from '../data/dataService';
 import { FilterState } from '../types';
 
 interface LLMResponse {
-    success: boolean;
-    answer: string;
-    error?: string;
+  success: boolean;
+  answer: string;
+  error?: string;
 }
 
 /**
  * Call LLM API with marketing data context
  */
 export async function callLLMAPI(
-  question: string, 
-  filters: FilterState, 
+  question: string,
+  filters: FilterState,
   apiEndpoint: string,
   apiKey?: string
 ): Promise<LLMResponse> {
   try {
     // Get comprehensive data context
     const dataContext = getLLMContext(filters);
-    
+
     if (!dataContext) {
       return {
         success: false,
@@ -30,7 +30,7 @@ export async function callLLMAPI(
 
     // Prepare the prompt with context
     const prompt = buildPrompt(question, dataContext);
-    
+
     // Prepare Azure OpenAI request body
     const requestBody = {
       messages: [
@@ -49,7 +49,7 @@ export async function callLLMAPI(
       frequency_penalty: 0,
       presence_penalty: 0
     };
-    
+
     // Make API call with proper Azure OpenAI headers
     const response = await fetch(apiEndpoint, {
       method: 'POST',
@@ -67,16 +67,16 @@ export async function callLLMAPI(
     }
 
     const result = await response.json();
-    
+
     // Parse Azure OpenAI response format
     let answer = "I couldn't generate a response.";
-    
+
     if (result.choices && result.choices.length > 0) {
       answer = result.choices[0].message?.content || answer;
     } else if (result.error) {
       throw new Error(`API Error: ${result.error.message || 'Unknown error'}`);
     }
-    
+
     return {
       success: true,
       answer: answer
@@ -98,7 +98,7 @@ export async function callLLMAPI(
 function buildPrompt(question: string, dataContext: any): string {
   const formatCurrency = (value: number) => `€${(value / 1000000).toFixed(1)}M`;
   const formatROI = (value: number) => `${value.toFixed(2)}x`;
-  
+
   return `MMM DATA CONTEXT for ${dataContext.context.brand} in ${dataContext.context.country}:
 
 AVAILABLE YEARS: ${dataContext.context.availableYears.join(', ')}
@@ -114,20 +114,12 @@ ${yearData.year}:
 `).join('')}
 
 ${dataContext.correlations ? `
-CHANNEL CORRELATIONS (significant > 0.3):
-${Object.entries(dataContext.correlations)
+CHANNEL CORRELATIONS for ${dataContext.correlations.year} (significant > 0.3):
+${Object.entries(dataContext.correlations.data)
   .filter(([_, corr]: [string, any]) => Math.abs(corr) > 0.3)
   .map(([pair, corr]: [string, any]) => `- ${pair.replace('_', ' & ')}: ${corr.toFixed(2)}`)
   .join('\n')}
 ` : ''}
-
-MONTHLY PERFORMANCE (ROI by month for ${dataContext.context.selectedYear}):
-${Object.entries(dataContext.selectedYearMonthlyPerformance).map(([channel, months]: [string, any]) => {
-  const monthData = Object.entries(months)
-    .map(([month, data]: [string, any]) => `${month}: ${formatROI(data.roi)}`)
-    .join(', ');
-  return `- ${channel}: ${monthData}`;
-}).join('\n')}
 
 AVAILABLE VARIABLES: ${dataContext.variables.join(', ')}
 
@@ -140,40 +132,40 @@ Answer concisely and directly. Provide specific numbers when asked.`;
  * Example usage with different LLM providers
  */
 export const LLMProviders = {
-    // OpenAI
-    openai: {
-        endpoint: 'https://api.openai.com/v1/chat/completions',
-        model: 'gpt-4',
-        buildRequest: (prompt: string, apiKey: string) => ({
-            model: 'gpt-4',
-            messages: [
-                { role: 'system', content: 'You are a marketing analytics expert.' },
-                { role: 'user', content: prompt }
-            ],
-            max_tokens: 1000,
-            temperature: 0.7
-        })
-    },
+  // OpenAI
+  openai: {
+    endpoint: 'https://api.openai.com/v1/chat/completions',
+    model: 'gpt-4',
+    buildRequest: (prompt: string, apiKey: string) => ({
+      model: 'gpt-4',
+      messages: [
+        { role: 'system', content: 'You are a marketing analytics expert.' },
+        { role: 'user', content: prompt }
+      ],
+      max_tokens: 1000,
+      temperature: 0.7
+    })
+  },
 
-    // Anthropic Claude
-    claude: {
-        endpoint: 'https://api.anthropic.com/v1/messages',
-        model: 'claude-3-sonnet-20240229',
-        buildRequest: (prompt: string, apiKey: string) => ({
-            model: 'claude-3-sonnet-20240229',
-            max_tokens: 1000,
-            messages: [
-                { role: 'user', content: prompt }
-            ]
-        })
-    },
+  // Anthropic Claude
+  claude: {
+    endpoint: 'https://api.anthropic.com/v1/messages',
+    model: 'claude-3-sonnet-20240229',
+    buildRequest: (prompt: string, apiKey: string) => ({
+      model: 'claude-3-sonnet-20240229',
+      max_tokens: 1000,
+      messages: [
+        { role: 'user', content: prompt }
+      ]
+    })
+  },
 
-    // Custom endpoint
-    custom: {
-        endpoint: 'YOUR_CUSTOM_ENDPOINT',
-        buildRequest: (prompt: string, apiKey?: string) => ({
-            prompt,
-            apiKey
-        })
-    }
+  // Custom endpoint
+  custom: {
+    endpoint: 'YOUR_CUSTOM_ENDPOINT',
+    buildRequest: (prompt: string, apiKey?: string) => ({
+      prompt,
+      apiKey
+    })
+  }
 };
