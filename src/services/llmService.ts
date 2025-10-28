@@ -113,14 +113,6 @@ ${yearData.year}:
 - Channels: ${yearData.channelPerformance.map((ch: any) => `${ch.channel}: ${formatCurrency(ch.investment)} inv, ${formatCurrency(ch.contribution)} contr, ${formatROI(ch.roi)} ROI`).join(' | ')}
 `).join('')}
 
-${dataContext.correlations ? `
-CHANNEL CORRELATIONS for ${dataContext.correlations.year} (significant > 0.3):
-${Object.entries(dataContext.correlations.data)
-  .filter(([_, corr]: [string, any]) => Math.abs(corr) > 0.3)
-  .map(([pair, corr]: [string, any]) => `- ${pair.replace('_', ' & ')}: ${corr.toFixed(2)}`)
-  .join('\n')}
-` : ''}
-
 AVAILABLE VARIABLES: ${dataContext.variables.join(', ')}
 
 QUESTION: ${question}

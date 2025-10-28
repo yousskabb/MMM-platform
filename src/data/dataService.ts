@@ -486,11 +486,6 @@ export function getLLMContext(filters: FilterState): any {
 
 
 
-        // Correlation Matrix (if available) - for selected year only
-        correlations: yearlyData.variables.length > 0 ? {
-            year: filters.selectedYear,
-            data: calculateCorrelations(yearlyData.contributions, yearlyData.variables)
-        } : null,
 
         // Weekly Trends
         weeklyTrends: {
