@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { FilterState, ChatMessage } from '../../types';
-import { generateChatAnswer } from '../../data/mockData';
-import { Send, Sparkles, User } from 'lucide-react';
+import { callLLMAPI, LLMProviders } from '../../services/llmService';
+import { Send, Sparkles, User, Settings } from 'lucide-react';
 
 interface ChatTabProps {
   filters: FilterState;
@@ -12,18 +12,27 @@ const ChatTab: React.FC<ChatTabProps> = ({ filters }) => {
     {
       id: '1',
       role: 'assistant',
-      content: `Hello! I'm your marketing data assistant. You can ask me questions about your marketing performance data for ${filters.brand} in ${filters.country}. For example:
-      
-- Which channel delivers the best ROI?
-- What is our total media investment?
-- Which media is least efficient?
-- What do you recommend for our budget allocation?`,
+      content: `Hello! I'm your AI marketing data assistant. I have access to all your marketing performance data for ${filters.brand} in ${filters.country} for ${filters.selectedYear}. 
+
+I can analyze:
+- Channel performance and ROI trends
+- Budget allocation optimization
+- Year-over-year comparisons
+- Channel correlations and synergies
+- Monthly performance patterns
+- Strategic recommendations
+
+What would you like to know about your marketing data?`,
       timestamp: new Date()
     }
   ]);
   
   const [inputValue, setInputValue] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [apiEndpoint, setApiEndpoint] = useState('');
+  const [apiKey, setApiKey] = useState('');
+  const [selectedProvider, setSelectedProvider] = useState('custom');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
   // Scroll to bottom whenever messages change
@@ -46,8 +55,14 @@ const ChatTab: React.FC<ChatTabProps> = ({ filters }) => {
     }]);
   }, [filters]);
   
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (!inputValue.trim() || isProcessing) return;
+    
+    // Check if API is configured
+    if (!apiEndpoint) {
+      setShowSettings(true);
+      return;
+    }
     
     // Add user message
     const userMessage: ChatMessage = {
@@ -61,20 +76,30 @@ const ChatTab: React.FC<ChatTabProps> = ({ filters }) => {
     setInputValue('');
     setIsProcessing(true);
     
-    // Simulate AI processing time
-    setTimeout(() => {
-      const answer = generateChatAnswer(userMessage.content, filters.country, filters.brand);
+    try {
+      // Call LLM API with real data context
+      const response = await callLLMAPI(inputValue, filters, apiEndpoint, apiKey);
       
       const assistantMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: answer,
+        content: response.answer,
         timestamp: new Date()
       };
       
       setMessages(prevMessages => [...prevMessages, assistantMessage]);
+    } catch (error) {
+      const errorMessage: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: `I encountered an error: ${error instanceof Error ? error.message : 'Unknown error'}. Please check your API configuration.`,
+        timestamp: new Date()
+      };
+      
+      setMessages(prevMessages => [...prevMessages, errorMessage]);
+    } finally {
       setIsProcessing(false);
-    }, 1000);
+    }
   };
   
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -88,7 +113,72 @@ const ChatTab: React.FC<ChatTabProps> = ({ filters }) => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-semibold text-slate-800">Chat with Your Data</h1>
+        <button
+          onClick={() => setShowSettings(!showSettings)}
+          className="btn btn-secondary flex items-center gap-2"
+        >
+          <Settings size={16} />
+          {apiEndpoint ? 'Configured' : 'Setup API'}
+        </button>
       </div>
+      
+      {/* API Configuration Panel */}
+      {showSettings && (
+        <div className="card bg-slate-50 border border-slate-200">
+          <h3 className="text-lg font-medium mb-4">Configure LLM API</h3>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">Provider</label>
+              <select
+                value={selectedProvider}
+                onChange={(e) => setSelectedProvider(e.target.value)}
+                className="input w-full"
+              >
+                <option value="custom">Custom Endpoint</option>
+                <option value="openai">OpenAI</option>
+                <option value="claude">Anthropic Claude</option>
+              </select>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">API Endpoint</label>
+              <input
+                type="text"
+                value={apiEndpoint}
+                onChange={(e) => setApiEndpoint(e.target.value)}
+                placeholder="https://your-api-endpoint.com/chat"
+                className="input w-full"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">API Key (optional)</label>
+              <input
+                type="password"
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                placeholder="Your API key"
+                className="input w-full"
+              />
+            </div>
+            
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowSettings(false)}
+                className="btn btn-primary"
+              >
+                Save Configuration
+              </button>
+              <button
+                onClick={() => setShowSettings(false)}
+                className="btn btn-secondary"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       
       <div className="flex flex-col h-[calc(100vh-240px)] bg-white rounded-lg shadow-card overflow-hidden border border-slate-200">
         {/* Chat messages */}
@@ -180,28 +270,40 @@ const ChatTab: React.FC<ChatTabProps> = ({ filters }) => {
         <h3 className="text-lg font-medium mb-3">Example Questions</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
           <button
-            onClick={() => setInputValue("Which channel delivers the best ROI?")}
+            onClick={() => setInputValue("Analyze our channel performance and identify the top 3 most efficient channels")}
             className="text-left p-2 text-sm rounded hover:bg-slate-100 transition-colors"
           >
-            Which channel delivers the best ROI?
+            Analyze our channel performance and identify the top 3 most efficient channels
           </button>
           <button
-            onClick={() => setInputValue("What is our total media investment?")}
+            onClick={() => setInputValue("What are the key trends in our monthly performance?")}
             className="text-left p-2 text-sm rounded hover:bg-slate-100 transition-colors"
           >
-            What is our total media investment?
+            What are the key trends in our monthly performance?
           </button>
           <button
-            onClick={() => setInputValue("Which media is least efficient?")}
+            onClick={() => setInputValue("How do our channels correlate with each other?")}
             className="text-left p-2 text-sm rounded hover:bg-slate-100 transition-colors"
           >
-            Which media is least efficient?
+            How do our channels correlate with each other?
           </button>
           <button
-            onClick={() => setInputValue("What do you recommend for our budget allocation?")}
+            onClick={() => setInputValue("Provide strategic recommendations for budget optimization")}
             className="text-left p-2 text-sm rounded hover:bg-slate-100 transition-colors"
           >
-            What do you recommend for our budget allocation?
+            Provide strategic recommendations for budget optimization
+          </button>
+          <button
+            onClick={() => setInputValue("Compare our performance year-over-year and identify growth opportunities")}
+            className="text-left p-2 text-sm rounded hover:bg-slate-100 transition-colors"
+          >
+            Compare our performance year-over-year and identify growth opportunities
+          </button>
+          <button
+            onClick={() => setInputValue("What are the risk factors in our current media mix?")}
+            className="text-left p-2 text-sm rounded hover:bg-slate-100 transition-colors"
+          >
+            What are the risk factors in our current media mix?
           </button>
         </div>
       </div>

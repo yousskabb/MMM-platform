@@ -396,3 +396,132 @@ function formatCurrency(value: number): string {
         maximumFractionDigits: 1
     }).format(value);
 }
+
+/**
+ * Get comprehensive data context for LLM
+ */
+export function getLLMContext(filters: FilterState): any {
+    if (!cachedData) {
+        return null;
+    }
+
+    const yearlyData = filterDataByYear(filters.selectedYear);
+    
+    // Calculate KPIs
+    const totalInvestment = yearlyData.channelData.reduce((sum, ch) => sum + ch.investment, 0);
+    const totalContribution = yearlyData.channelData.reduce((sum, ch) => sum + ch.contribution, 0);
+    const totalROI = totalInvestment > 0 ? totalContribution / totalInvestment : 0;
+    
+    // Get previous year data for comparison
+    const prevYear = filters.selectedYear - 1;
+    const prevYearData = getAvailableYears().includes(prevYear) ? filterDataByYear(prevYear) : null;
+    
+    return {
+        // Basic context
+        context: {
+            year: filters.selectedYear,
+            country: filters.country,
+            brand: filters.brand,
+            previousYear: prevYear,
+            hasPreviousYearData: !!prevYearData
+        },
+        
+        // KPI Summary
+        kpis: {
+            totalInvestment,
+            totalContribution,
+            totalROI,
+            totalSellOut: yearlyData.contributions.reduce((sum, week) => sum + (week.sales || 0), 0),
+            actionableSellOut: totalContribution
+        },
+        
+        // Channel Performance
+        channelPerformance: yearlyData.channelData.map(channel => ({
+            channel: channel.channel,
+            investment: channel.investment,
+            contribution: channel.contribution,
+            roi: channel.roi,
+            mediaType: channel.mediaType,
+            yoyGrowth: channel.yoyGrowth
+        })),
+        
+        // Monthly Performance
+        monthlyPerformance: yearlyData.monthlyData.reduce((acc, item) => {
+            if (!acc[item.channel]) {
+                acc[item.channel] = {};
+            }
+            acc[item.channel][item.month] = {
+                investment: item.investment,
+                contribution: item.contribution,
+                roi: item.roi
+            };
+            return acc;
+        }, {} as any),
+        
+        // Year-over-Year Comparison
+        yearOverYear: prevYearData ? {
+            currentYear: {
+                totalInvestment,
+                totalContribution,
+                totalROI
+            },
+            previousYear: {
+                totalInvestment: prevYearData.channelData.reduce((sum, ch) => sum + ch.investment, 0),
+                totalContribution: prevYearData.channelData.reduce((sum, ch) => sum + ch.contribution, 0),
+                totalROI: prevYearData.channelData.reduce((sum, ch) => sum + ch.investment, 0) > 0 
+                    ? prevYearData.channelData.reduce((sum, ch) => sum + ch.contribution, 0) / prevYearData.channelData.reduce((sum, ch) => sum + ch.investment, 0)
+                    : 0
+            }
+        } : null,
+        
+        // Correlation Matrix (if available)
+        correlations: yearlyData.variables.length > 0 ? calculateCorrelations(yearlyData.contributions, yearlyData.variables) : null,
+        
+        // Weekly Trends
+        weeklyTrends: {
+            contributions: yearlyData.contributions.slice(-12), // Last 12 weeks
+            investments: yearlyData.investments.slice(-12)
+        }
+    };
+}
+
+/**
+ * Calculate correlations between channels
+ */
+function calculateCorrelations(contributions: WeeklyData[], variables: string[]): any {
+    const correlations: any = {};
+    
+    for (let i = 0; i < variables.length; i++) {
+        for (let j = i + 1; j < variables.length; j++) {
+            const var1 = variables[i];
+            const var2 = variables[j];
+            
+            const values1 = contributions.map(week => week[var1] as number || 0);
+            const values2 = contributions.map(week => week[var2] as number || 0);
+            
+            const correlation = calculatePearsonCorrelation(values1, values2);
+            correlations[`${var1}_${var2}`] = correlation;
+        }
+    }
+    
+    return correlations;
+}
+
+/**
+ * Calculate Pearson correlation coefficient
+ */
+function calculatePearsonCorrelation(x: number[], y: number[]): number {
+    const n = x.length;
+    if (n === 0) return 0;
+    
+    const sumX = x.reduce((a, b) => a + b, 0);
+    const sumY = y.reduce((a, b) => a + b, 0);
+    const sumXY = x.reduce((sum, xi, i) => sum + xi * y[i], 0);
+    const sumX2 = x.reduce((sum, xi) => sum + xi * xi, 0);
+    const sumY2 = y.reduce((sum, yi) => sum + yi * yi, 0);
+    
+    const numerator = n * sumXY - sumX * sumY;
+    const denominator = Math.sqrt((n * sumX2 - sumX * sumX) * (n * sumY2 - sumY * sumY));
+    
+    return denominator === 0 ? 0 : numerator / denominator;
+}
