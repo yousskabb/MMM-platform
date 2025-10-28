@@ -331,7 +331,7 @@ const RecapTab: React.FC<RecapTabProps> = ({ filters }) => {
       </div>
 
       {/* 2. Channel Allocation Bar Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Investment Bar Chart */}
         <div className="card">
           <h3 className="text-lg font-medium mb-4 flex items-center gap-2">
@@ -393,6 +393,48 @@ const RecapTab: React.FC<RecapTabProps> = ({ filters }) => {
                 <Bar dataKey="value" name="Contribution">
                   {contributionPieData.map((entry, index) => (
                     <Cell key={`contribution-cell-${index}`} fill={entry.color} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* ROI by Channel Chart */}
+        <div className="card">
+          <h3 className="text-lg font-medium mb-4 flex items-center gap-2">
+            <BarChartIcon size={18} className="text-orange-600" />
+            ROI by Channel
+          </h3>
+          <div style={{ height: `${Math.max(300, channelData.length * 35)}px` }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={channelData.map(channel => ({
+                  name: channel.channel,
+                  roi: channel.roi,
+                  color: channel.color
+                }))}
+                margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                layout="vertical"
+              >
+                <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
+                <XAxis
+                  type="number"
+                  domain={[0, 'auto']}
+                  tickFormatter={(value) => `${value.toFixed(1)}x`}
+                />
+                <YAxis
+                  type="category"
+                  dataKey="name"
+                  width={Math.max(120, Math.min(200, channelData.length * 8))}
+                  tick={{ fontSize: 12 }}
+                />
+                <Tooltip
+                  formatter={(value) => [`${(value as number).toFixed(2)}x`, 'ROI']}
+                />
+                <Bar dataKey="roi" name="ROI">
+                  {channelData.map((entry, index) => (
+                    <Cell key={`roi-cell-${index}`} fill={entry.color} />
                   ))}
                 </Bar>
               </BarChart>
