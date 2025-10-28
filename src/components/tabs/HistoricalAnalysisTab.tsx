@@ -582,7 +582,6 @@ const HistoricalAnalysisTab: React.FC<HistoricalAnalysisTabProps> = ({ filters }
                 {generateMultiYearWaterfallData().map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={entry.color} />
                 ))}
-              </Bar>
                 <LabelList
                   content={(props: any) => {
                     const { payload, index } = props;
