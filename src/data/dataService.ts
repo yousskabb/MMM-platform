@@ -452,35 +452,8 @@ export function getLLMContext(filters: FilterState): any {
     const prevYearData = availableYears.includes(prevYear) ? filterDataByYear(prevYear) : null;
 
     return {
-        // Basic context
-        context: {
-            selectedYear: filters.selectedYear,
-            country: filters.country,
-            brand: filters.brand,
-            availableYears,
-            previousYear: prevYear,
-            hasPreviousYearData: !!prevYearData
-        },
-
-        // Selected Year KPIs
-        selectedYearKPIs: {
-            totalInvestment,
-            totalContribution,
-            totalROI,
-            totalSellOut: yearlyData.contributions.reduce((sum, week) => sum + (week.sales || 0), 0),
-            actionableSellOut: totalContribution
-        },
-
-        // All Years Data
-        allYearsData,
-
-
-
-
-
-
-        // Variables list
-        variables: yearlyData.variables
+        // All Years Data - Complete performance data for every available year
+        allYearsData
     };
 }
 

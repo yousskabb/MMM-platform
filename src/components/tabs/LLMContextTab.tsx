@@ -86,37 +86,7 @@ const LLMContextTab: React.FC<LLMContextTabProps> = ({ filters }) => {
                 </button>
             </div>
 
-            <div className="space-y-6">
-                {/* Basic Context */}
-                <div className="bg-white rounded-lg border border-slate-200 p-4">
-                    <h3 className="text-lg font-medium text-slate-800 mb-3">Basic Context</h3>
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div>
-                            <span className="font-medium text-slate-600">Selected Year:</span>
-                            <span className="ml-2 text-slate-800">{context.context?.selectedYear}</span>
-                        </div>
-                        <div>
-                            <span className="font-medium text-slate-600">Country:</span>
-                            <span className="ml-2 text-slate-800">{context.context?.country}</span>
-                        </div>
-                        <div>
-                            <span className="font-medium text-slate-600">Brand:</span>
-                            <span className="ml-2 text-slate-800">{context.context?.brand}</span>
-                        </div>
-                        <div>
-                            <span className="font-medium text-slate-600">Available Years:</span>
-                            <span className="ml-2 text-slate-800">{context.context?.availableYears?.join(', ')}</span>
-                        </div>
-                        <div>
-                            <span className="font-medium text-slate-600">Previous Year:</span>
-                            <span className="ml-2 text-slate-800">{context.context?.previousYear}</span>
-                        </div>
-                        <div>
-                            <span className="font-medium text-slate-600">Has Previous Year Data:</span>
-                            <span className="ml-2 text-slate-800">{context.context?.hasPreviousYearData ? 'Yes' : 'No'}</span>
-                        </div>
-                    </div>
-                </div>
+      <div className="space-y-6">
 
 
                 {/* All Years Data Summary */}
@@ -142,13 +112,6 @@ const LLMContextTab: React.FC<LLMContextTabProps> = ({ filters }) => {
 
 
 
-        {/* Variables */}
-        <div className="bg-white rounded-lg border border-slate-200 p-4">
-          <h3 className="text-lg font-medium text-slate-800 mb-3">Available Variables</h3>
-          <div className="text-sm text-slate-600">
-            {context.variables?.join(', ') || 'No variables available'}
-          </div>
-        </div>
 
         {/* Interactive JSON Context */}
         <div className="bg-slate-50 rounded-lg border border-slate-200 p-4">

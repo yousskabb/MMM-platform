@@ -98,12 +98,11 @@ export async function callLLMAPI(
 function buildPrompt(question: string, dataContext: any): string {
   const formatCurrency = (value: number) => `€${(value / 1000000).toFixed(1)}M`;
   const formatROI = (value: number) => `${value.toFixed(2)}x`;
+  
+  return `You are a Marketing Mix Modeling (MMM) analyst. You have been given marketing performance data for multiple years. Answer questions concisely and directly. Provide specific numbers when asked. Only give detailed analysis if specifically requested.
 
-  return `MMM DATA CONTEXT for ${dataContext.context.brand} in ${dataContext.context.country}:
+MARKETING PERFORMANCE DATA:
 
-AVAILABLE YEARS: ${dataContext.context.availableYears.join(', ')}
-
-ALL YEARS DATA:
 ${dataContext.allYearsData.map((yearData: any) => `
 ${yearData.year}:
 - Total Investment: ${formatCurrency(yearData.totalInvestment)}
@@ -112,8 +111,6 @@ ${yearData.year}:
 - Total Sell Out: ${formatCurrency(yearData.totalSellOut)}
 - Channels: ${yearData.channelPerformance.map((ch: any) => `${ch.channel}: ${formatCurrency(ch.investment)} inv, ${formatCurrency(ch.contribution)} contr, ${formatROI(ch.roi)} ROI`).join(' | ')}
 `).join('')}
-
-AVAILABLE VARIABLES: ${dataContext.variables.join(', ')}
 
 QUESTION: ${question}
 

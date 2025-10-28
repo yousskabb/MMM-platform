@@ -8,7 +8,7 @@ import SynergiesTab from '../tabs/SynergiesTab';
 import ROITab from '../tabs/ROITab';
 import BudgetPlanningTab from '../tabs/BudgetPlanningTab';
 import SimulationsTab from '../tabs/SimulationsTab';
-import ChatTab from '../tabs/ChatTab';
+import ChatTab from '../tabs/ConversationChatTab';
 import ResponseCurvesTab from '../tabs/ResponseCurvesTab';
 import DataTab from '../tabs/DataTab';
 import LLMContextTab from '../tabs/LLMContextTab';

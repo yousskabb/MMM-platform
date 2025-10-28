@@ -182,16 +182,13 @@ export function clearConversation(): void {
  * Build system message with context
  */
 function buildSystemMessage(dataContext: any): string {
-    const formatCurrency = (value: number) => `€${(value / 1000000).toFixed(1)}M`;
-    const formatROI = (value: number) => `${value.toFixed(2)}x`;
+  const formatCurrency = (value: number) => `€${(value / 1000000).toFixed(1)}M`;
+  const formatROI = (value: number) => `${value.toFixed(2)}x`;
+  
+  return `You are a Marketing Mix Modeling (MMM) analyst. You have been given marketing performance data for multiple years. Answer questions concisely and directly. Provide specific numbers when asked. Only give detailed analysis if specifically requested.
 
-    return `You are a Marketing Mix Modeling (MMM) analyst. You have been given context about sales, contributions, investments, ROI, channels, and years. Answer questions concisely and directly. Provide specific numbers when asked. Only give detailed analysis if specifically requested.
+MARKETING PERFORMANCE DATA:
 
-MMM DATA CONTEXT for ${dataContext.context.brand} in ${dataContext.context.country}:
-
-AVAILABLE YEARS: ${dataContext.context.availableYears.join(', ')}
-
-ALL YEARS DATA:
 ${dataContext.allYearsData.map((yearData: any) => `
 ${yearData.year}:
 - Total Investment: ${formatCurrency(yearData.totalInvestment)}
@@ -201,7 +198,5 @@ ${yearData.year}:
 - Channels: ${yearData.channelPerformance.map((ch: any) => `${ch.channel}: ${formatCurrency(ch.investment)} inv, ${formatCurrency(ch.contribution)} contr, ${formatROI(ch.roi)} ROI`).join(' | ')}
 `).join('')}
 
-AVAILABLE VARIABLES: ${dataContext.variables.join(', ')}
-
-Remember this context for the entire conversation. Answer questions based on this data.`;
+Remember this data for the entire conversation. Answer questions based on this marketing performance data.`;
 }
