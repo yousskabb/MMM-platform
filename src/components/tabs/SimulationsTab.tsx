@@ -160,7 +160,7 @@ const SimulationsTab: React.FC<SimulationsTabProps> = ({ filters }) => {
     localStorage.removeItem('simulationStarted');
     localStorage.removeItem('simulationValidated');
   };
-
+  
   // Calculate totals
   const totalReferenceBudget = simulationData.reduce((sum, item) => sum + item.referenceBudget, 0);
   const totalNewBudget = simulationData.reduce((sum, item) => sum + item.newBudget, 0);
@@ -209,7 +209,7 @@ const SimulationsTab: React.FC<SimulationsTabProps> = ({ filters }) => {
             className="btn btn-secondary"
           >
             Reset
-          </button>
+            </button>
         </div>
 
         <div className="card">
@@ -273,7 +273,7 @@ const SimulationsTab: React.FC<SimulationsTabProps> = ({ filters }) => {
                 </tr>
               </tfoot>
             </table>
-          </div>
+            </div>
 
           <div className="mt-6 flex justify-end">
             <button
@@ -283,7 +283,7 @@ const SimulationsTab: React.FC<SimulationsTabProps> = ({ filters }) => {
               <CheckCircle size={18} />
               Validate Simulation
             </button>
-          </div>
+            </div>
         </div>
       </div>
     );
@@ -317,7 +317,7 @@ const SimulationsTab: React.FC<SimulationsTabProps> = ({ filters }) => {
           New Simulation
         </button>
       </div>
-
+      
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <div className="card">
@@ -330,7 +330,7 @@ const SimulationsTab: React.FC<SimulationsTabProps> = ({ filters }) => {
             {totalVariation >= 0 ? '+' : ''}{totalVariation.toFixed(1)}%
           </p>
           <p className="text-xs text-slate-500 mt-1">vs {latestYear}</p>
-        </div>
+          </div>
         <div className="card">
           <h3 className="text-sm font-medium text-slate-500 mb-2">Expected Contribution</h3>
           <p className="text-2xl font-bold text-slate-800">{(totalNewContribution / 1000000).toFixed(1)}M</p>
@@ -341,7 +341,7 @@ const SimulationsTab: React.FC<SimulationsTabProps> = ({ filters }) => {
             {((totalNewContribution - totalReferenceContribution) / totalReferenceContribution * 100) >= 0 ? '+' : ''}{((totalNewContribution - totalReferenceContribution) / totalReferenceContribution * 100).toFixed(1)}%
           </p>
           <p className="text-xs text-slate-500 mt-1">vs {latestYear}</p>
-        </div>
+          </div>
         <div className="card">
           <h3 className="text-sm font-medium text-slate-500 mb-2">Average ROI</h3>
           <p className="text-2xl font-bold text-slate-800">
@@ -424,19 +424,19 @@ const SimulationsTab: React.FC<SimulationsTabProps> = ({ filters }) => {
                 />
                 <Legend />
                 <Bar dataKey="reference" name={`${latestYear} Contribution`} fill="#94a3b8" />
-                <Bar dataKey="new" name="Simulated Contribution" fill="#10b981" />
+                <Bar dataKey="new" name="Simulation" fill="#10b981" />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
       </div>
-
+      
       {/* Channel Comparison Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="card">
           <h3 className="text-lg font-medium mb-4">Budget Comparison: {latestYear} vs Simulation</h3>
           <div className="h-96">
-            <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height="100%">
               <BarChart data={comparisonData} margin={{ bottom: Math.max(80, comparisonData.length * 5) }}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis
@@ -465,17 +465,17 @@ const SimulationsTab: React.FC<SimulationsTabProps> = ({ filters }) => {
                     return null;
                   }}
                 />
-                <Legend />
+                  <Legend />
                 <Bar dataKey="referenceBudget" name={`${latestYear}`} fill="#94a3b8" />
                 <Bar dataKey="newBudget" name="Simulation">
                   {comparisonData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+                </BarChart>
+              </ResponsiveContainer>
           </div>
-        </div>
+            </div>
 
         <div className="card">
           <h3 className="text-lg font-medium mb-4">Contribution Comparison: {latestYear} vs Simulation</h3>
@@ -565,7 +565,7 @@ const SimulationsTab: React.FC<SimulationsTabProps> = ({ filters }) => {
             </tbody>
           </table>
         </div>
-      </div>
+            </div>
     </div>
   );
 };
