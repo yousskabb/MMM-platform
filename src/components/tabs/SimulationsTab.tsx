@@ -350,7 +350,88 @@ const SimulationsTab: React.FC<SimulationsTabProps> = ({ filters }) => {
         </div>
       </div>
 
-      {/* Comparison Charts */}
+      {/* Total Comparison Charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <div className="card">
+          <h3 className="text-lg font-medium mb-4">Total Budget Comparison: {latestYear} vs Simulation</h3>
+          <div className="h-96">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={[
+                {
+                  name: 'Total Budget',
+                  referenceBudget: simulationData.reduce((sum, item) => sum + item.referenceBudget, 0),
+                  newBudget: simulationData.reduce((sum, item) => sum + item.newBudget, 0)
+                }
+              ]} margin={{ bottom: 40 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis tickFormatter={(value) => formatNumberAxis(value)} />
+                <Tooltip
+                  content={({ active, payload }) => {
+                    if (active && payload && payload.length) {
+                      return (
+                        <div style={{ backgroundColor: 'white', border: '1px solid #e2e8f0', padding: '10px', borderRadius: '4px' }}>
+                          <p style={{ color: '#64748b', marginBottom: '5px' }}>Total Budget</p>
+                          {payload.map((entry, index) => (
+                            <p key={index} style={{ color: entry.color, margin: '2px 0' }}>
+                              {entry.dataKey === 'referenceBudget' ? `${latestYear}` : 'Simulation'}: {formatNumberDetailed(entry.value as number)}
+                            </p>
+                          ))}
+                        </div>
+                      );
+                    }
+                    return null;
+                  }}
+                />
+                <Legend />
+                <Bar dataKey="referenceBudget" name={`${latestYear}`} fill="#94a3b8" />
+                <Bar dataKey="newBudget" name="Simulation" fill="#3b82f6" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        <div className="card">
+          <h3 className="text-lg font-medium mb-4">Total Contribution Comparison: {latestYear} vs Simulation</h3>
+          <div className="h-96">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={[
+                {
+                  name: 'Total Contribution',
+                  reference: simulationData.reduce((sum, item) => sum + (item.referenceBudget * item.roi), 0),
+                  new: simulationData.reduce((sum, item) => sum + item.expectedContribution, 0)
+                }
+              ]} margin={{ bottom: 40 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis tickFormatter={(value) => formatNumberAxis(value)} />
+                <Tooltip
+                  content={({ active, payload }) => {
+                    if (active && payload && payload.length) {
+                      return (
+                        <div style={{ backgroundColor: 'white', border: '1px solid #e2e8f0', padding: '10px', borderRadius: '4px' }}>
+                          <p style={{ color: '#64748b', marginBottom: '5px' }}>Total Contribution</p>
+                          {payload.map((entry, index) => (
+                            <p key={index} style={{ color: entry.color, margin: '2px 0' }}>
+                              {entry.dataKey === 'reference' ? `${latestYear}` : 'Simulation'}: {formatNumberDetailed(entry.value as number)}
+                            </p>
+                          ))}
+                        </div>
+                      );
+                    }
+                    return null;
+                  }}
+                />
+                <Legend />
+                <Bar dataKey="reference" name={`${latestYear} Contribution`} fill="#94a3b8" />
+                <Bar dataKey="new" name="Simulated Contribution" fill="#10b981" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
+
+      {/* Channel Comparison Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="card">
           <h3 className="text-lg font-medium mb-4">Budget Comparison: {latestYear} vs Simulation</h3>
