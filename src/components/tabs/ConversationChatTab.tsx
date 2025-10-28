@@ -9,13 +9,14 @@ interface ConversationChatTabProps {
 }
 
 const ConversationChatTab: React.FC<ConversationChatTabProps> = ({ filters }) => {
-    const [messages, setMessages] = useState<ChatMessage[]>([]);
-    const [inputValue, setInputValue] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [inputValue, setInputValue] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const [apiEndpoint] = useState(import.meta.env.VITE_LLM_API_ENDPOINT || '');
   const [apiKey] = useState(import.meta.env.VITE_LLM_API_KEY || '');
-    const [conversationInitialized, setConversationInitialized] = useState(false);
-    const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [conversationInitialized, setConversationInitialized] = useState(false);
+  const [isPageReload, setIsPageReload] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -25,17 +26,45 @@ const ConversationChatTab: React.FC<ConversationChatTabProps> = ({ filters }) =>
         scrollToBottom();
     }, [messages]);
 
-  // Initialize conversation on startup
+  // Detect page reload vs tab switch
   useEffect(() => {
-    // Check if we have a conversation state but don't restore UI messages on page reload
+    const pageLoadTime = sessionStorage.getItem('pageLoadTime');
+    const now = Date.now().toString();
+    
+    if (!pageLoadTime) {
+      // First visit or page reload
+      setIsPageReload(true);
+      sessionStorage.setItem('pageLoadTime', now);
+    } else {
+      // Tab switch (pageLoadTime exists)
+      setIsPageReload(false);
+    }
+  }, []);
+
+  // Load existing conversation and initialize if needed
+  useEffect(() => {
     const state = getConversationState();
     setConversationInitialized(state.contextSent);
+    
+    // Convert conversation state to chat messages (skip system message)
+    // Only restore messages if this is NOT a page reload
+    if (state.messages.length > 0 && !isPageReload) {
+      const chatMessages: ChatMessage[] = state.messages
+        .filter(msg => msg.role !== 'system')
+        .map((msg, index) => ({
+          id: Date.now() + index,
+          role: msg.role as 'user' | 'assistant',
+          content: msg.content,
+          timestamp: new Date() // We don't store timestamps, so use current time
+        }));
+      setMessages(chatMessages);
+    }
     
     // Initialize if needed
     if (apiEndpoint && apiKey && needsReinitialization(filters)) {
       initializeConversationAsync();
     }
-  }, [apiEndpoint, apiKey]); // Removed filters dependency since context doesn't change
+  }, [apiEndpoint, apiKey, isPageReload]); // Added isPageReload dependency
 
     const initializeConversationAsync = async () => {
         if (!apiEndpoint || !apiKey) return;
