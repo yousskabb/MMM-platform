@@ -3,8 +3,7 @@ import {
   BarChart as BarChartIcon,
   LineChart as LineChartIcon,
   Euro,
-  TrendingUp,
-  FileText
+  TrendingUp
 } from 'lucide-react';
 import KPICard from '../ui/KPICard';
 import { FilterState } from '../../types';
@@ -31,7 +30,6 @@ interface RecapTabProps {
 }
 
 const RecapTab: React.FC<RecapTabProps> = ({ filters }) => {
-  const [showInsights, setShowInsights] = useState(false);
 
   // Check if data is loaded before trying to use it
   if (!isDataLoaded()) {
@@ -285,13 +283,6 @@ const RecapTab: React.FC<RecapTabProps> = ({ filters }) => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-semibold text-slate-800">Marketing Performance Recap ({currentYear})</h1>
-        <button
-          onClick={() => setShowInsights(true)}
-          className="btn btn-primary flex items-center gap-2"
-        >
-          <FileText size={16} />
-          Generate Business Report
-        </button>
       </div>
 
       {/* 1. KPI Cards with correct calculations */}
