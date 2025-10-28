@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Sidebar from './Sidebar';
 import FilterBar from './FilterBar';
 import { FilterState } from '../../types';
-import { Activity, BarChart3, PieChart, LineChart, MessageCircle, Calculator, TrendingUp, Loader2, Database, Eye } from 'lucide-react';
+import { Activity, BarChart3, PieChart, LineChart, MessageCircle, Calculator, TrendingUp, Loader2, Database, Eye, History } from 'lucide-react';
 import RecapTab from '../tabs/RecapTab';
 import SynergiesTab from '../tabs/SynergiesTab';
 import ROITab from '../tabs/ROITab';
@@ -12,9 +12,10 @@ import ChatTab from '../tabs/ConversationChatTab';
 import ResponseCurvesTab from '../tabs/ResponseCurvesTab';
 import DataTab from '../tabs/DataTab';
 import LLMContextTab from '../tabs/LLMContextTab';
+import HistoricalAnalysisTab from '../tabs/HistoricalAnalysisTab';
 import { loadExcelData, getAvailableYears } from '../../data/dataService';
 
-type Tab = 'recap' | 'synergies' | 'roi' | 'budget' | 'simulations' | 'response' | 'chat' | 'data' | 'llm-context';
+type Tab = 'recap' | 'synergies' | 'roi' | 'budget' | 'simulations' | 'response' | 'chat' | 'data' | 'llm-context' | 'historical';
 
 interface TabConfig {
   id: Tab;
@@ -29,6 +30,7 @@ const tabConfig: TabConfig[] = [
   { id: 'budget', label: 'Budget Planning', icon: <PieChart size={20} /> },
   { id: 'response', label: 'Response Curves', icon: <TrendingUp size={20} /> },
   { id: 'simulations', label: 'Simulations', icon: <Calculator size={20} /> },
+  { id: 'historical', label: 'Historical Analysis', icon: <History size={20} /> },
   { id: 'chat', label: 'Chat with Your Data', icon: <MessageCircle size={20} /> },
   { id: 'data', label: 'Data', icon: <Database size={20} /> },
   { id: 'llm-context', label: 'LLM Context', icon: <Eye size={20} /> },
@@ -97,6 +99,8 @@ const Layout: React.FC = () => {
         return <SimulationsTab filters={filters} />;
       case 'response':
         return <ResponseCurvesTab filters={filters} />;
+      case 'historical':
+        return <HistoricalAnalysisTab filters={filters} />;
       case 'chat':
         return <ChatTab filters={filters} />;
       case 'data':
