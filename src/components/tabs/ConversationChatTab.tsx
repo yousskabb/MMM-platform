@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { FilterState, ChatMessage } from '../../types';
 import { initializeConversation, sendMessage, needsReinitialization, clearConversation, getConversationState } from '../../services/conversationLLMService';
-import { Send, Sparkles, User, Settings, RotateCcw } from 'lucide-react';
+import { Send, Sparkles, User, RotateCcw } from 'lucide-react';
 
 interface ConversationChatTabProps {
     filters: FilterState;
@@ -12,10 +12,8 @@ const ConversationChatTab: React.FC<ConversationChatTabProps> = ({ filters }) =>
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [inputValue, setInputValue] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-    const [showSettings, setShowSettings] = useState(false);
-    const [apiEndpoint, setApiEndpoint] = useState(import.meta.env.VITE_LLM_API_ENDPOINT || '');
-    const [apiKey, setApiKey] = useState(import.meta.env.VITE_LLM_API_KEY || '');
-    const [selectedProvider, setSelectedProvider] = useState('azure');
+  const [apiEndpoint] = useState(import.meta.env.VITE_LLM_API_ENDPOINT || '');
+  const [apiKey] = useState(import.meta.env.VITE_LLM_API_KEY || '');
     const [conversationInitialized, setConversationInitialized] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -81,18 +79,18 @@ const ConversationChatTab: React.FC<ConversationChatTabProps> = ({ filters }) =>
         }
     };
 
-    const handleSendMessage = async () => {
-        if (!inputValue.trim() || isLoading) return;
+  const handleSendMessage = async () => {
+    if (!inputValue.trim() || isLoading) return;
 
-        if (!apiEndpoint) {
-            setShowSettings(true);
-            return;
-        }
+    if (!apiEndpoint || !apiKey) {
+      alert('API endpoint or key not configured. Please check your .env file.');
+      return;
+    }
 
-        if (!conversationInitialized) {
-            await initializeConversationAsync();
-            return;
-        }
+    if (!conversationInitialized) {
+      await initializeConversationAsync();
+      return;
+    }
 
         const userMessage: ChatMessage = {
             id: Date.now(),
@@ -164,84 +162,17 @@ const ConversationChatTab: React.FC<ConversationChatTabProps> = ({ filters }) =>
                         </span>
                     )}
                 </div>
-                <div className="flex items-center gap-2">
-                    <button
-                        onClick={handleResetConversation}
-                        className="flex items-center gap-1 px-3 py-1 text-sm text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-md transition-colors"
-                    >
-                        <RotateCcw className="w-4 h-4" />
-                        Reset
-                    </button>
-                    <button
-                        onClick={() => setShowSettings(!showSettings)}
-                        className="flex items-center gap-1 px-3 py-1 text-sm text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-md transition-colors"
-                    >
-                        <Settings className="w-4 h-4" />
-                        Setup API
-                    </button>
-                </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleResetConversation}
+            className="flex items-center gap-1 px-3 py-1 text-sm text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-md transition-colors"
+          >
+            <RotateCcw className="w-4 h-4" />
+            Reset
+          </button>
+        </div>
             </div>
 
-            {/* Settings Panel */}
-            {showSettings && (
-                <div className="p-4 bg-slate-50 border-b border-slate-200">
-                    <div className="max-w-md mx-auto space-y-4">
-                        <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-2">Provider</label>
-                            <select
-                                value={selectedProvider}
-                                onChange={(e) => setSelectedProvider(e.target.value)}
-                                className="input w-full"
-                            >
-                                <option value="azure">Azure OpenAI</option>
-                                <option value="openai">OpenAI</option>
-                                <option value="claude">Anthropic Claude</option>
-                            </select>
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-2">Azure OpenAI Endpoint</label>
-                            <input
-                                type="text"
-                                value={apiEndpoint}
-                                onChange={(e) => setApiEndpoint(e.target.value)}
-                                placeholder="https://your-resource.openai.azure.com/openai/deployments/your-deployment/chat/completions"
-                                className="input w-full"
-                            />
-                            <p className="text-xs text-slate-500 mt-1">
-                                Format: https://your-resource.openai.azure.com/openai/deployments/your-deployment/chat/completions
-                            </p>
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-2">Azure OpenAI API Key</label>
-                            <input
-                                type="password"
-                                value={apiKey}
-                                onChange={(e) => setApiKey(e.target.value)}
-                                placeholder="Your Azure OpenAI API key"
-                                className="input w-full"
-                            />
-                        </div>
-
-                        <div className="flex gap-2">
-                            <button
-                                onClick={() => setShowSettings(false)}
-                                className="btn btn-primary"
-                            >
-                                Save & Close
-                            </button>
-                            <button
-                                onClick={initializeConversationAsync}
-                                disabled={!apiEndpoint || !apiKey}
-                                className="btn btn-secondary"
-                            >
-                                Initialize Context
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
 
             {/* Messages */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -324,7 +255,7 @@ const ConversationChatTab: React.FC<ConversationChatTabProps> = ({ filters }) =>
                         value={inputValue}
                         onChange={(e) => setInputValue(e.target.value)}
                         onKeyPress={handleKeyPress}
-                        placeholder={conversationInitialized ? "Ask about your marketing data..." : "Click 'Initialize Context' first..."}
+                        placeholder={conversationInitialized ? "Ask about your marketing data..." : "Context will load automatically..."}
                         disabled={!conversationInitialized || isLoading}
                         className="flex-1 input"
                     />
