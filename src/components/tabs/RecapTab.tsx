@@ -151,18 +151,30 @@ const RecapTab: React.FC<RecapTabProps> = ({ filters }) => {
   }));
 
   // Prepare weekly contribution data for chart (only current year data)
-  const weeklyContributionData = weeklyContributions.map(week => {
+  const weeklyContributionData = weeklyContributions.map((week, index) => {
     const chartData: any = {
       date: week.date.toISOString().split('T')[0], // Format as YYYY-MM-DD
       formattedDate: week.date.toLocaleDateString(), // For display
       base: week.base,
-      sales: week.sales
+      sales: week.sales,
+      month: week.date.toLocaleDateString('en-US', { month: 'short' }),
+      isFirstOfMonth: false
     };
 
     // Add each variable's contribution
     channelData.forEach(channel => {
       chartData[channel.channel] = week[channel.channel] as number;
     });
+
+    // Check if this is the first week of a new month
+    if (index === 0) {
+      chartData.isFirstOfMonth = true;
+    } else {
+      const prevWeek = weeklyContributions[index - 1];
+      const currentMonth = week.date.getMonth();
+      const prevMonth = prevWeek.date.getMonth();
+      chartData.isFirstOfMonth = currentMonth !== prevMonth;
+    }
 
     return chartData;
   });
@@ -449,8 +461,11 @@ const RecapTab: React.FC<RecapTabProps> = ({ filters }) => {
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis
                 dataKey="date"
-                tickFormatter={(value) => new Date(value).toLocaleDateString('en-US', { month: 'short' })}
-                interval="preserveStartEnd"
+                tickFormatter={(value, index) => {
+                  const dataPoint = weeklyContributionData[index];
+                  return dataPoint?.isFirstOfMonth ? dataPoint.month : '';
+                }}
+                interval={0}
               />
               <YAxis
                 tickFormatter={(value) => formatNumberAxis(value)}
