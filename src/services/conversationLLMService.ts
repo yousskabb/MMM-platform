@@ -17,12 +17,29 @@ interface ConversationState {
 
 // Store conversation state in sessionStorage for session-only persistence
 const CONVERSATION_STORAGE_KEY = 'llm_conversation_state';
+const SESSION_TIMEOUT_KEY = 'llm_session_timeout';
+const SESSION_TIMEOUT_DURATION = 30 * 60 * 1000; // 30 minutes in milliseconds
 
-// Load conversation state from sessionStorage
+// Load conversation state from sessionStorage with timeout check
 function loadConversationState(): ConversationState {
   try {
     const stored = sessionStorage.getItem(CONVERSATION_STORAGE_KEY);
-    if (stored) {
+    const timeoutStored = sessionStorage.getItem(SESSION_TIMEOUT_KEY);
+    
+    if (stored && timeoutStored) {
+      const lastActivity = parseInt(timeoutStored);
+      const now = Date.now();
+      
+      // Check if session has expired (30 minutes)
+      if (now - lastActivity > SESSION_TIMEOUT_DURATION) {
+        console.log('LLM session expired after 30 minutes of inactivity');
+        clearConversation();
+        return {
+          messages: [],
+          contextSent: false
+        };
+      }
+      
       return JSON.parse(stored);
     }
   } catch (error) {
@@ -34,10 +51,11 @@ function loadConversationState(): ConversationState {
   };
 }
 
-// Save conversation state to sessionStorage
+// Save conversation state to sessionStorage with timeout update
 function saveConversationState(state: ConversationState): void {
   try {
     sessionStorage.setItem(CONVERSATION_STORAGE_KEY, JSON.stringify(state));
+    sessionStorage.setItem(SESSION_TIMEOUT_KEY, Date.now().toString());
   } catch (error) {
     console.error('Failed to save conversation state:', error);
   }
@@ -205,6 +223,34 @@ export function clearConversation(): void {
   };
   // Clear from sessionStorage
   sessionStorage.removeItem(CONVERSATION_STORAGE_KEY);
+  sessionStorage.removeItem(SESSION_TIMEOUT_KEY);
+}
+
+/**
+ * Auto-initialize conversation on app startup
+ */
+export async function autoInitializeConversation(filters: FilterState): Promise<void> {
+  const apiEndpoint = import.meta.env.VITE_LLM_API_ENDPOINT;
+  const apiKey = import.meta.env.VITE_LLM_API_KEY;
+  
+  if (!apiEndpoint || !apiKey) {
+    console.log('LLM API credentials not configured, skipping auto-initialization');
+    return;
+  }
+  
+  // Check if context has already been sent in this session
+  if (conversationState.contextSent) {
+    console.log('LLM context already initialized in this session');
+    return;
+  }
+  
+  try {
+    console.log('Auto-initializing LLM conversation on app startup...');
+    await initializeConversation(filters);
+    console.log('LLM conversation auto-initialized successfully');
+  } catch (error) {
+    console.error('Failed to auto-initialize LLM conversation:', error);
+  }
 }
 
 /**

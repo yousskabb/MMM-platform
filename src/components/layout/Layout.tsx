@@ -14,6 +14,7 @@ import DataTab from '../tabs/DataTab';
 import LLMContextTab from '../tabs/LLMContextTab';
 import HistoricalAnalysisTab from '../tabs/HistoricalAnalysisTab';
 import { loadExcelData, getAvailableYears } from '../../data/dataService';
+import { autoInitializeConversation } from '../../services/conversationLLMService';
 
 type Tab = 'recap' | 'synergies' | 'roi' | 'budget' | 'simulations' | 'response' | 'chat' | 'data' | 'llm-context' | 'historical';
 
@@ -74,6 +75,16 @@ const Layout: React.FC = () => {
         }
 
         setDataLoaded(true);
+        
+        // Auto-initialize LLM conversation after data is loaded
+        const yearsForLLM = getAvailableYears();
+        if (yearsForLLM.length > 0) {
+          const currentFilters = {
+            ...filters,
+            selectedYear: yearsForLLM[yearsForLLM.length - 1]
+          };
+          await autoInitializeConversation(currentFilters);
+        }
       } catch (err) {
         console.error('Failed to load Excel data:', err);
         setError(err instanceof Error ? err.message : 'Failed to load data');
