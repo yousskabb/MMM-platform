@@ -15,13 +15,13 @@ interface ConversationState {
   contextSent: boolean;
 }
 
-// Store conversation state in localStorage for persistence
+// Store conversation state in sessionStorage for session-only persistence
 const CONVERSATION_STORAGE_KEY = 'llm_conversation_state';
 
-// Load conversation state from localStorage
+// Load conversation state from sessionStorage
 function loadConversationState(): ConversationState {
   try {
-    const stored = localStorage.getItem(CONVERSATION_STORAGE_KEY);
+    const stored = sessionStorage.getItem(CONVERSATION_STORAGE_KEY);
     if (stored) {
       return JSON.parse(stored);
     }
@@ -34,10 +34,10 @@ function loadConversationState(): ConversationState {
   };
 }
 
-// Save conversation state to localStorage
+// Save conversation state to sessionStorage
 function saveConversationState(state: ConversationState): void {
   try {
-    localStorage.setItem(CONVERSATION_STORAGE_KEY, JSON.stringify(state));
+    sessionStorage.setItem(CONVERSATION_STORAGE_KEY, JSON.stringify(state));
   } catch (error) {
     console.error('Failed to save conversation state:', error);
   }
@@ -203,8 +203,8 @@ export function clearConversation(): void {
     messages: [],
     contextSent: false
   };
-  // Clear from localStorage
-  localStorage.removeItem(CONVERSATION_STORAGE_KEY);
+  // Clear from sessionStorage
+  sessionStorage.removeItem(CONVERSATION_STORAGE_KEY);
 }
 
 /**
