@@ -37,19 +37,48 @@ const SimulationsTab: React.FC<SimulationsTabProps> = ({ filters }) => {
       const data = filterDataByYear(latest);
       setReferenceData(data.channelData);
 
-      // Initialize simulation data
-      const initData: SimulationRow[] = data.channelData.map(channel => ({
-        channel: channel.channel,
-        referenceBudget: channel.investment,
-        newBudget: channel.investment, // Start with same as reference
-        variation: 0,
-        roi: channel.roi,
-        expectedContribution: channel.investment * channel.roi, // Will be calculated when user inputs budget
-        color: channel.color
-      }));
-      setSimulationData(initData);
+      // Check if there's saved simulation state
+      const savedSimulation = localStorage.getItem('simulationState');
+      const savedIsStarted = localStorage.getItem('simulationStarted') === 'true';
+      const savedIsValidated = localStorage.getItem('simulationValidated') === 'true';
+
+      if (savedSimulation && savedIsStarted) {
+        try {
+          const parsedSimulation = JSON.parse(savedSimulation);
+          setSimulationData(parsedSimulation);
+          setIsStarted(savedIsStarted);
+          setIsValidated(savedIsValidated);
+        } catch (error) {
+          console.error('Error parsing saved simulation:', error);
+          // Fallback to default initialization
+          initializeSimulationData(data.channelData);
+        }
+      } else {
+        // Initialize simulation data
+        initializeSimulationData(data.channelData);
+      }
     }
   }, []);
+
+  const initializeSimulationData = (channelData: any[]) => {
+    const initData: SimulationRow[] = channelData.map(channel => ({
+      channel: channel.channel,
+      referenceBudget: channel.investment,
+      newBudget: channel.investment, // Start with same as reference
+      variation: 0,
+      roi: channel.roi,
+      expectedContribution: channel.investment * channel.roi, // Will be calculated when user inputs budget
+      color: channel.color
+    }));
+    setSimulationData(initData);
+  };
+
+  // Save simulation data to localStorage whenever it changes
+  useEffect(() => {
+    if (simulationData.length > 0) {
+      localStorage.setItem('simulationState', JSON.stringify(simulationData));
+    }
+  }, [simulationData]);
 
   const handleBudgetChange = (channel: string, inputValue: string) => {
     // User inputs in millions, accept both ; and , as decimal separators
@@ -103,11 +132,13 @@ const SimulationsTab: React.FC<SimulationsTabProps> = ({ filters }) => {
 
   const handleValidate = () => {
     setIsValidated(true);
+    localStorage.setItem('simulationValidated', 'true');
   };
 
   const handleStartSimulation = () => {
     setIsStarted(true);
     setIsValidated(false);
+    localStorage.setItem('simulationStarted', 'true');
   };
 
   const handleReset = () => {
@@ -121,7 +152,13 @@ const SimulationsTab: React.FC<SimulationsTabProps> = ({ filters }) => {
       color: channel.color
     }));
     setSimulationData(initData);
+    setIsStarted(false);
     setIsValidated(false);
+
+    // Clear saved simulation state
+    localStorage.removeItem('simulationState');
+    localStorage.removeItem('simulationStarted');
+    localStorage.removeItem('simulationValidated');
   };
 
   // Calculate totals
@@ -282,29 +319,34 @@ const SimulationsTab: React.FC<SimulationsTabProps> = ({ filters }) => {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <div className="card">
+          <h3 className="text-sm font-medium text-slate-500 mb-2">New Budget</h3>
+          <p className="text-2xl font-bold text-slate-800">{(totalNewBudget / 1000000).toFixed(1)}M</p>
+        </div>
         <div className="card">
           <h3 className="text-sm font-medium text-slate-500 mb-2">Total Budget Variation</h3>
           <p className={`text-2xl font-bold ${totalVariation >= 0 ? 'text-green-600' : 'text-red-600'}`}>
             {totalVariation >= 0 ? '+' : ''}{totalVariation.toFixed(1)}%
           </p>
+          <p className="text-xs text-slate-500 mt-1">vs {latestYear}</p>
         </div>
         <div className="card">
           <h3 className="text-sm font-medium text-slate-500 mb-2">Expected Contribution</h3>
           <p className="text-2xl font-bold text-slate-800">{(totalNewContribution / 1000000).toFixed(1)}M</p>
-          <p className="text-xs text-slate-500 mt-1">
-            {((totalNewContribution - totalReferenceContribution) / totalReferenceContribution * 100).toFixed(1)}% vs {latestYear}
+        </div>
+        <div className="card">
+          <h3 className="text-sm font-medium text-slate-500 mb-2">Contribution Variation</h3>
+          <p className={`text-2xl font-bold ${((totalNewContribution - totalReferenceContribution) / totalReferenceContribution * 100) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+            {((totalNewContribution - totalReferenceContribution) / totalReferenceContribution * 100) >= 0 ? '+' : ''}{((totalNewContribution - totalReferenceContribution) / totalReferenceContribution * 100).toFixed(1)}%
           </p>
+          <p className="text-xs text-slate-500 mt-1">vs {latestYear}</p>
         </div>
         <div className="card">
           <h3 className="text-sm font-medium text-slate-500 mb-2">Average ROI</h3>
           <p className="text-2xl font-bold text-slate-800">
             {(totalNewContribution / totalNewBudget).toFixed(1)}x
           </p>
-        </div>
-        <div className="card">
-          <h3 className="text-sm font-medium text-slate-500 mb-2">Total New Budget</h3>
-          <p className="text-2xl font-bold text-slate-800">{(totalNewBudget / 1000000).toFixed(1)}M</p>
         </div>
       </div>
 
@@ -333,7 +375,7 @@ const SimulationsTab: React.FC<SimulationsTabProps> = ({ filters }) => {
                           <p style={{ color: '#64748b', marginBottom: '5px' }}>{payload[0].payload.name}</p>
                           {payload.map((entry, index) => (
                             <p key={index} style={{ color: entry.color, margin: '2px 0' }}>
-                              {entry.name === 'referenceBudget' ? `${latestYear}` : 'Simulation'}: {formatNumberDetailed(entry.value as number)}
+                              {entry.dataKey === 'referenceBudget' ? `${latestYear}` : 'Simulation'}: {formatNumberDetailed(entry.value as number)}
                             </p>
                           ))}
                         </div>
@@ -355,7 +397,7 @@ const SimulationsTab: React.FC<SimulationsTabProps> = ({ filters }) => {
         </div>
 
         <div className="card">
-          <h3 className="text-lg font-medium mb-4">Expected Contribution Comparison</h3>
+          <h3 className="text-lg font-medium mb-4">Contribution Comparison: {latestYear} vs Simulation</h3>
           <div className="h-96">
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart data={contributionData} margin={{ bottom: Math.max(80, contributionData.length * 5) }}>
@@ -377,7 +419,7 @@ const SimulationsTab: React.FC<SimulationsTabProps> = ({ filters }) => {
                           <p style={{ color: '#64748b', marginBottom: '5px' }}>{payload[0].payload.name}</p>
                           {payload.map((entry, index) => (
                             <p key={index} style={{ color: entry.color, margin: '2px 0' }}>
-                              {entry.name === 'reference' ? `${latestYear}` : 'Simulation'}: {formatNumberDetailed(entry.value as number)}
+                              {entry.dataKey === 'reference' ? `${latestYear}` : 'Simulation'}: {formatNumberDetailed(entry.value as number)}
                             </p>
                           ))}
                         </div>
