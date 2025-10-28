@@ -25,23 +25,11 @@ const ConversationChatTab: React.FC<ConversationChatTabProps> = ({ filters }) =>
         scrollToBottom();
     }, [messages]);
 
-  // Load existing conversation and initialize if needed
+  // Initialize conversation on startup
   useEffect(() => {
+    // Check if we have a conversation state but don't restore UI messages on page reload
     const state = getConversationState();
     setConversationInitialized(state.contextSent);
-    
-    // Convert conversation state to chat messages (skip system message)
-    if (state.messages.length > 0) {
-      const chatMessages: ChatMessage[] = state.messages
-        .filter(msg => msg.role !== 'system')
-        .map((msg, index) => ({
-          id: Date.now() + index,
-          role: msg.role as 'user' | 'assistant',
-          content: msg.content,
-          timestamp: new Date() // We don't store timestamps, so use current time
-        }));
-      setMessages(chatMessages);
-    }
     
     // Initialize if needed
     if (apiEndpoint && apiKey && needsReinitialization(filters)) {
