@@ -430,12 +430,12 @@ export function getLLMContext(filters: FilterState): any {
             totalContribution: yearContribution,
             totalROI: yearROI,
             totalSellOut: yearSellOut,
-               channelPerformance: yearData.channelData.map(channel => ({
-                   channel: channel.channel,
-                   investment: channel.investment,
-                   contribution: channel.contribution,
-                   roi: channel.roi
-               })),
+            channelPerformance: yearData.channelData.map(channel => ({
+                channel: channel.channel,
+                investment: channel.investment,
+                contribution: channel.contribution,
+                roi: channel.roi
+            })),
             monthlyPerformance: yearData.monthlyData.reduce((acc, item) => {
                 if (!acc[item.channel]) {
                     acc[item.channel] = {};
