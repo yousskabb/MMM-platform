@@ -44,7 +44,7 @@ export async function loadExcelData(): Promise<void> {
 
     try {
         // Load Excel file from public/data folder
-        cachedData = await parseExcelFile('/data/data.xlsx');
+        cachedData = await parseExcelFile('/MMM-platform/data/data.xlsx');
     } catch (error) {
         throw error;
     } finally {
