@@ -225,6 +225,14 @@ ${yearData.year}:
 - Total ROI: ${formatROI(yearData.totalROI)}
 - Total Sell Out: ${formatCurrency(yearData.totalSellOut)}
 - Channels: ${yearData.channelPerformance.map((ch: any) => `${ch.channel}: ${formatCurrency(ch.investment)} inv, ${formatCurrency(ch.contribution)} contr, ${formatROI(ch.roi)} ROI`).join(' | ')}
+
+Monthly Performance by Channel:
+${Object.entries(yearData.monthlyPerformance || {}).map(([channel, months]: [string, any]) => {
+  const monthData = Object.entries(months)
+    .map(([month, data]: [string, any]) => `${month}: ${formatCurrency(data.investment)} inv, ${formatCurrency(data.contribution)} contr, ${formatROI(data.roi)} ROI`)
+    .join(' | ');
+  return `  - ${channel}: ${monthData}`;
+}).join('\n')}
 `).join('')}
 
 Remember this data for the entire conversation. Answer questions based on this marketing performance data.`;
