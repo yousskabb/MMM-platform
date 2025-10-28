@@ -407,19 +407,19 @@ export function getLLMContext(filters: FilterState): any {
 
     const availableYears = getAvailableYears();
     const yearlyData = filterDataByYear(filters.selectedYear);
-    
+
     // Calculate KPIs for selected year
     const totalInvestment = yearlyData.channelData.reduce((sum, ch) => sum + ch.investment, 0);
     const totalContribution = yearlyData.channelData.reduce((sum, ch) => sum + ch.contribution, 0);
     const totalROI = totalInvestment > 0 ? totalContribution / totalInvestment : 0;
-    
+
     // Get data for all available years
     const allYearsData = availableYears.map(year => {
         const yearData = filterDataByYear(year);
         const yearInvestment = yearData.channelData.reduce((sum, ch) => sum + ch.investment, 0);
         const yearContribution = yearData.channelData.reduce((sum, ch) => sum + ch.contribution, 0);
         const yearROI = yearInvestment > 0 ? yearContribution / yearInvestment : 0;
-        
+
         return {
             year,
             totalInvestment: yearInvestment,
@@ -446,11 +446,11 @@ export function getLLMContext(filters: FilterState): any {
             }, {} as any)
         };
     });
-    
+
     // Get previous year data for comparison
     const prevYear = filters.selectedYear - 1;
     const prevYearData = availableYears.includes(prevYear) ? filterDataByYear(prevYear) : null;
-    
+
     return {
         // Basic context
         context: {
@@ -461,7 +461,7 @@ export function getLLMContext(filters: FilterState): any {
             previousYear: prevYear,
             hasPreviousYearData: !!prevYearData
         },
-        
+
         // Selected Year KPIs
         selectedYearKPIs: {
             totalInvestment,
@@ -470,10 +470,10 @@ export function getLLMContext(filters: FilterState): any {
             totalSellOut: yearlyData.contributions.reduce((sum, week) => sum + (week.sales || 0), 0),
             actionableSellOut: totalContribution
         },
-        
+
         // All Years Data
         allYearsData,
-        
+
         // Selected Year Channel Performance
         selectedYearChannelPerformance: yearlyData.channelData.map(channel => ({
             channel: channel.channel,
@@ -483,7 +483,7 @@ export function getLLMContext(filters: FilterState): any {
             mediaType: channel.mediaType,
             yoyGrowth: channel.yoyGrowth
         })),
-        
+
         // Selected Year Monthly Performance
         selectedYearMonthlyPerformance: yearlyData.monthlyData.reduce((acc, item) => {
             if (!acc[item.channel]) {
@@ -496,7 +496,7 @@ export function getLLMContext(filters: FilterState): any {
             };
             return acc;
         }, {} as any),
-        
+
         // Year-over-Year Comparison
         yearOverYear: prevYearData ? {
             currentYear: {
@@ -507,21 +507,21 @@ export function getLLMContext(filters: FilterState): any {
             previousYear: {
                 totalInvestment: prevYearData.channelData.reduce((sum, ch) => sum + ch.investment, 0),
                 totalContribution: prevYearData.channelData.reduce((sum, ch) => sum + ch.contribution, 0),
-                totalROI: prevYearData.channelData.reduce((sum, ch) => sum + ch.investment, 0) > 0 
+                totalROI: prevYearData.channelData.reduce((sum, ch) => sum + ch.investment, 0) > 0
                     ? prevYearData.channelData.reduce((sum, ch) => sum + ch.contribution, 0) / prevYearData.channelData.reduce((sum, ch) => sum + ch.investment, 0)
                     : 0
             }
         } : null,
-        
+
         // Correlation Matrix (if available)
         correlations: yearlyData.variables.length > 0 ? calculateCorrelations(yearlyData.contributions, yearlyData.variables) : null,
-        
+
         // Weekly Trends
         weeklyTrends: {
             contributions: yearlyData.contributions.slice(-12), // Last 12 weeks
             investments: yearlyData.investments.slice(-12)
         },
-        
+
         // Variables list
         variables: yearlyData.variables
     };

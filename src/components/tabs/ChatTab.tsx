@@ -30,8 +30,8 @@ What would you like to know about your marketing data?`,
   const [inputValue, setInputValue] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [apiEndpoint, setApiEndpoint] = useState('');
-  const [apiKey, setApiKey] = useState('');
+  const [apiEndpoint, setApiEndpoint] = useState(import.meta.env.VITE_LLM_API_ENDPOINT || '');
+  const [apiKey, setApiKey] = useState(import.meta.env.VITE_LLM_API_KEY || '');
   const [selectedProvider, setSelectedProvider] = useState('custom');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -208,8 +208,8 @@ What would you like to know about your marketing data?`,
 
                 <div
                   className={`p-3 rounded-lg ${message.role === 'user'
-                      ? 'bg-primary-600 text-white'
-                      : 'bg-slate-100 text-slate-800'
+                    ? 'bg-primary-600 text-white'
+                    : 'bg-slate-100 text-slate-800'
                     }`}
                 >
                   <div className="whitespace-pre-wrap">{message.content}</div>

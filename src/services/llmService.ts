@@ -72,7 +72,7 @@ export async function callLLMAPI(
 function buildPrompt(question: string, dataContext: any): string {
     const formatCurrency = (value: number) => `€${(value / 1000000).toFixed(1)}M`;
     const formatROI = (value: number) => `${value.toFixed(2)}x`;
-    
+
     return `You are a marketing analytics expert analyzing data for ${dataContext.context.brand} in ${dataContext.context.country}.
 
 MARKETING DATA CONTEXT:
@@ -86,9 +86,9 @@ SELECTED YEAR (${dataContext.context.selectedYear}) KPIs:
 - Total Sell Out: ${formatCurrency(dataContext.selectedYearKPIs.totalSellOut)}
 
 SELECTED YEAR CHANNEL PERFORMANCE:
-${dataContext.selectedYearChannelPerformance.map((ch: any) => 
-    `- ${ch.channel}: ${formatCurrency(ch.investment)} investment, ${formatCurrency(ch.contribution)} contribution, ${formatROI(ch.roi)} ROI (${ch.mediaType})`
-).join('\n')}
+${dataContext.selectedYearChannelPerformance.map((ch: any) =>
+        `- ${ch.channel}: ${formatCurrency(ch.investment)} investment, ${formatCurrency(ch.contribution)} contribution, ${formatROI(ch.roi)} ROI (${ch.mediaType})`
+    ).join('\n')}
 
 ALL YEARS DATA:
 ${dataContext.allYearsData.map((yearData: any) => `
@@ -109,18 +109,18 @@ YEAR-OVER-YEAR COMPARISON (${dataContext.context.previousYear} vs ${dataContext.
 ${dataContext.correlations ? `
 CHANNEL CORRELATIONS (significant correlations > 0.3):
 ${Object.entries(dataContext.correlations)
-    .filter(([_, corr]: [string, any]) => Math.abs(corr) > 0.3)
-    .map(([pair, corr]: [string, any]) => `- ${pair.replace('_', ' & ')}: ${corr.toFixed(2)} correlation`)
-    .join('\n')}
+                .filter(([_, corr]: [string, any]) => Math.abs(corr) > 0.3)
+                .map(([pair, corr]: [string, any]) => `- ${pair.replace('_', ' & ')}: ${corr.toFixed(2)} correlation`)
+                .join('\n')}
 ` : ''}
 
 SELECTED YEAR MONTHLY PERFORMANCE (ROI by month):
 ${Object.entries(dataContext.selectedYearMonthlyPerformance).map(([channel, months]: [string, any]) => {
-    const monthData = Object.entries(months)
-        .map(([month, data]: [string, any]) => `${month}: ${formatROI(data.roi)}`)
-        .join(', ');
-    return `- ${channel}: ${monthData}`;
-}).join('\n')}
+                    const monthData = Object.entries(months)
+                        .map(([month, data]: [string, any]) => `${month}: ${formatROI(data.roi)}`)
+                        .join(', ');
+                    return `- ${channel}: ${monthData}`;
+                }).join('\n')}
 
 AVAILABLE VARIABLES: ${dataContext.variables.join(', ')}
 
