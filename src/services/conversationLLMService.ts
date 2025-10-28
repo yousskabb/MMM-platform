@@ -8,20 +8,42 @@ interface LLMResponse {
 }
 
 interface ConversationState {
-    messages: Array<{
-        role: 'system' | 'user' | 'assistant';
-        content: string;
-    }>;
-    contextSent: boolean;
-    lastFilters: FilterState | null;
+  messages: Array<{
+    role: 'system' | 'user' | 'assistant';
+    content: string;
+  }>;
+  contextSent: boolean;
 }
 
-// Store conversation state in memory (you could also use localStorage)
-let conversationState: ConversationState = {
+// Store conversation state in localStorage for persistence
+const CONVERSATION_STORAGE_KEY = 'llm_conversation_state';
+
+// Load conversation state from localStorage
+function loadConversationState(): ConversationState {
+  try {
+    const stored = localStorage.getItem(CONVERSATION_STORAGE_KEY);
+    if (stored) {
+      return JSON.parse(stored);
+    }
+  } catch (error) {
+    console.error('Failed to load conversation state:', error);
+  }
+  return {
     messages: [],
-    contextSent: false,
-    lastFilters: null
-};
+    contextSent: false
+  };
+}
+
+// Save conversation state to localStorage
+function saveConversationState(state: ConversationState): void {
+  try {
+    localStorage.setItem(CONVERSATION_STORAGE_KEY, JSON.stringify(state));
+  } catch (error) {
+    console.error('Failed to save conversation state:', error);
+  }
+}
+
+let conversationState: ConversationState = loadConversationState();
 
 /**
  * Initialize conversation with context (call this once when filters change)
@@ -44,17 +66,19 @@ export async function initializeConversation(
 
         const systemMessage = buildSystemMessage(dataContext);
 
-        // Reset conversation with new context
-        conversationState = {
-            messages: [
-                {
-                    role: 'system',
-                    content: systemMessage
-                }
-            ],
-            contextSent: true,
-            lastFilters: filters
-        };
+    // Reset conversation with new context
+    conversationState = {
+      messages: [
+        {
+          role: 'system',
+          content: systemMessage
+        }
+      ],
+      contextSent: true
+    };
+    
+    // Save to localStorage
+    saveConversationState(conversationState);
 
         return {
             success: true,
@@ -88,11 +112,14 @@ export async function sendMessage(
             };
         }
 
-        // Add user message
-        conversationState.messages.push({
-            role: 'user',
-            content: question
-        });
+    // Add user message
+    conversationState.messages.push({
+      role: 'user',
+      content: question
+    });
+    
+    // Save user message to localStorage
+    saveConversationState(conversationState);
 
         // Prepare request
         const requestBody = {
@@ -130,11 +157,14 @@ export async function sendMessage(
             throw new Error(`API Error: ${result.error.message || 'Unknown error'}`);
         }
 
-        // Add assistant response to conversation
-        conversationState.messages.push({
-            role: 'assistant',
-            content: answer
-        });
+    // Add assistant response to conversation
+    conversationState.messages.push({
+      role: 'assistant',
+      content: answer
+    });
+    
+    // Save updated conversation to localStorage
+    saveConversationState(conversationState);
 
         return {
             success: true,
@@ -155,9 +185,7 @@ export async function sendMessage(
  * Check if conversation needs to be reinitialized
  */
 export function needsReinitialization(filters: FilterState): boolean {
-    return !conversationState.contextSent ||
-        !conversationState.lastFilters ||
-        conversationState.lastFilters.selectedYear !== filters.selectedYear;
+  return !conversationState.contextSent;
 }
 
 /**
@@ -171,11 +199,12 @@ export function getConversationState(): ConversationState {
  * Clear conversation
  */
 export function clearConversation(): void {
-    conversationState = {
-        messages: [],
-        contextSent: false,
-        lastFilters: null
-    };
+  conversationState = {
+    messages: [],
+    contextSent: false
+  };
+  // Clear from localStorage
+  localStorage.removeItem(CONVERSATION_STORAGE_KEY);
 }
 
 /**

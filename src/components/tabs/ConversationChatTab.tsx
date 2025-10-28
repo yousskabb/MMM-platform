@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { FilterState, ChatMessage } from '../../types';
-import { initializeConversation, sendMessage, needsReinitialization, clearConversation } from '../../services/conversationLLMService';
+import { initializeConversation, sendMessage, needsReinitialization, clearConversation, getConversationState } from '../../services/conversationLLMService';
 import { Send, Sparkles, User, Settings, RotateCcw } from 'lucide-react';
 
 interface ConversationChatTabProps {
@@ -27,12 +27,29 @@ const ConversationChatTab: React.FC<ConversationChatTabProps> = ({ filters }) =>
         scrollToBottom();
     }, [messages]);
 
-    // Initialize conversation when filters change
-    useEffect(() => {
-        if (apiEndpoint && apiKey && needsReinitialization(filters)) {
-            initializeConversationAsync();
-        }
-    }, [filters, apiEndpoint, apiKey]);
+  // Load existing conversation and initialize if needed
+  useEffect(() => {
+    const state = getConversationState();
+    setConversationInitialized(state.contextSent);
+    
+    // Convert conversation state to chat messages (skip system message)
+    if (state.messages.length > 0) {
+      const chatMessages: ChatMessage[] = state.messages
+        .filter(msg => msg.role !== 'system')
+        .map((msg, index) => ({
+          id: Date.now() + index,
+          role: msg.role as 'user' | 'assistant',
+          content: msg.content,
+          timestamp: new Date() // We don't store timestamps, so use current time
+        }));
+      setMessages(chatMessages);
+    }
+    
+    // Initialize if needed
+    if (apiEndpoint && apiKey && needsReinitialization(filters)) {
+      initializeConversationAsync();
+    }
+  }, [apiEndpoint, apiKey]); // Removed filters dependency since context doesn't change
 
     const initializeConversationAsync = async () => {
         if (!apiEndpoint || !apiKey) return;
