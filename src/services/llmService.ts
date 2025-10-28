@@ -113,13 +113,6 @@ ${yearData.year}:
 - Channels: ${yearData.channelPerformance.map((ch: any) => `${ch.channel}: ${formatCurrency(ch.investment)} inv, ${formatCurrency(ch.contribution)} contr, ${formatROI(ch.roi)} ROI`).join(' | ')}
 `).join('')}
 
-${dataContext.yearOverYear ? `
-YEAR-OVER-YEAR COMPARISON (${dataContext.context.previousYear} vs ${dataContext.context.selectedYear}):
-- Investment: ${formatCurrency(dataContext.yearOverYear.previousYear.totalInvestment)} → ${formatCurrency(dataContext.yearOverYear.currentYear.totalInvestment)}
-- Contribution: ${formatCurrency(dataContext.yearOverYear.previousYear.totalContribution)} → ${formatCurrency(dataContext.yearOverYear.currentYear.totalContribution)}
-- ROI: ${formatROI(dataContext.yearOverYear.previousYear.totalROI)} → ${formatROI(dataContext.yearOverYear.currentYear.totalROI)}
-` : ''}
-
 ${dataContext.correlations ? `
 CHANNEL CORRELATIONS (significant > 0.3):
 ${Object.entries(dataContext.correlations)

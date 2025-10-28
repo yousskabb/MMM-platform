@@ -432,8 +432,7 @@ export function getLLMContext(filters: FilterState): any {
                    investment: channel.investment,
                    contribution: channel.contribution,
                    roi: channel.roi,
-                   mediaType: channel.mediaType,
-                   yoyGrowth: channel.yoyGrowth
+                   mediaType: channel.mediaType
                })),
                monthlyPerformance: yearData.monthlyData.reduce((acc, item) => {
                    if (!acc[item.channel]) {
@@ -476,15 +475,14 @@ export function getLLMContext(filters: FilterState): any {
         // All Years Data
         allYearsData,
 
-        // Selected Year Channel Performance
-        selectedYearChannelPerformance: yearlyData.channelData.map(channel => ({
-            channel: channel.channel,
-            investment: channel.investment,
-            contribution: channel.contribution,
-            roi: channel.roi,
-            mediaType: channel.mediaType,
-            yoyGrowth: channel.yoyGrowth
-        })),
+       // Selected Year Channel Performance
+       selectedYearChannelPerformance: yearlyData.channelData.map(channel => ({
+           channel: channel.channel,
+           investment: channel.investment,
+           contribution: channel.contribution,
+           roi: channel.roi,
+           mediaType: channel.mediaType
+       })),
 
         // Selected Year Monthly Performance
         selectedYearMonthlyPerformance: yearlyData.monthlyData.reduce((acc, item) => {
@@ -499,21 +497,6 @@ export function getLLMContext(filters: FilterState): any {
             return acc;
         }, {} as any),
 
-        // Year-over-Year Comparison
-        yearOverYear: prevYearData ? {
-            currentYear: {
-                totalInvestment,
-                totalContribution,
-                totalROI
-            },
-            previousYear: {
-                totalInvestment: prevYearData.channelData.reduce((sum, ch) => sum + ch.investment, 0),
-                totalContribution: prevYearData.channelData.reduce((sum, ch) => sum + ch.contribution, 0),
-                totalROI: prevYearData.channelData.reduce((sum, ch) => sum + ch.investment, 0) > 0
-                    ? prevYearData.channelData.reduce((sum, ch) => sum + ch.contribution, 0) / prevYearData.channelData.reduce((sum, ch) => sum + ch.investment, 0)
-                    : 0
-            }
-        } : null,
 
         // Correlation Matrix (if available)
         correlations: yearlyData.variables.length > 0 ? calculateCorrelations(yearlyData.contributions, yearlyData.variables) : null,
