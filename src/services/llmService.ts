@@ -36,7 +36,7 @@ export async function callLLMAPI(
       messages: [
         {
           role: "system",
-          content: "You are a marketing analytics expert. Provide detailed, data-driven analysis and recommendations based on the marketing performance data provided."
+          content: "You are a Marketing Mix Modeling (MMM) analyst. You have been given context about sales, contributions, investments, ROI, channels, and years. Answer questions concisely and directly. Provide specific numbers when asked. Only give detailed analysis if specifically requested."
         },
         {
           role: "user",
@@ -96,25 +96,12 @@ export async function callLLMAPI(
  * Build a comprehensive prompt with marketing data context
  */
 function buildPrompt(question: string, dataContext: any): string {
-    const formatCurrency = (value: number) => `€${(value / 1000000).toFixed(1)}M`;
-    const formatROI = (value: number) => `${value.toFixed(2)}x`;
-
-    return `You are a marketing analytics expert analyzing data for ${dataContext.context.brand} in ${dataContext.context.country}.
-
-MARKETING DATA CONTEXT:
+  const formatCurrency = (value: number) => `€${(value / 1000000).toFixed(1)}M`;
+  const formatROI = (value: number) => `${value.toFixed(2)}x`;
+  
+  return `MMM DATA CONTEXT for ${dataContext.context.brand} in ${dataContext.context.country}:
 
 AVAILABLE YEARS: ${dataContext.context.availableYears.join(', ')}
-
-SELECTED YEAR (${dataContext.context.selectedYear}) KPIs:
-- Total Investment: ${formatCurrency(dataContext.selectedYearKPIs.totalInvestment)}
-- Total Contribution: ${formatCurrency(dataContext.selectedYearKPIs.totalContribution)}
-- Total ROI: ${formatROI(dataContext.selectedYearKPIs.totalROI)}
-- Total Sell Out: ${formatCurrency(dataContext.selectedYearKPIs.totalSellOut)}
-
-SELECTED YEAR CHANNEL PERFORMANCE:
-${dataContext.selectedYearChannelPerformance.map((ch: any) =>
-        `- ${ch.channel}: ${formatCurrency(ch.investment)} investment, ${formatCurrency(ch.contribution)} contribution, ${formatROI(ch.roi)} ROI (${ch.mediaType})`
-    ).join('\n')}
 
 ALL YEARS DATA:
 ${dataContext.allYearsData.map((yearData: any) => `
@@ -122,7 +109,8 @@ ${yearData.year}:
 - Total Investment: ${formatCurrency(yearData.totalInvestment)}
 - Total Contribution: ${formatCurrency(yearData.totalContribution)}
 - Total ROI: ${formatROI(yearData.totalROI)}
-- Channels: ${yearData.channelPerformance.map((ch: any) => `${ch.channel} (${formatROI(ch.roi)})`).join(', ')}
+- Total Sell Out: ${formatCurrency(yearData.totalSellOut)}
+- Channels: ${yearData.channelPerformance.map((ch: any) => `${ch.channel}: ${formatCurrency(ch.investment)} inv, ${formatCurrency(ch.contribution)} contr, ${formatROI(ch.roi)} ROI`).join(' | ')}
 `).join('')}
 
 ${dataContext.yearOverYear ? `
@@ -133,33 +121,26 @@ YEAR-OVER-YEAR COMPARISON (${dataContext.context.previousYear} vs ${dataContext.
 ` : ''}
 
 ${dataContext.correlations ? `
-CHANNEL CORRELATIONS (significant correlations > 0.3):
+CHANNEL CORRELATIONS (significant > 0.3):
 ${Object.entries(dataContext.correlations)
-                .filter(([_, corr]: [string, any]) => Math.abs(corr) > 0.3)
-                .map(([pair, corr]: [string, any]) => `- ${pair.replace('_', ' & ')}: ${corr.toFixed(2)} correlation`)
-                .join('\n')}
+  .filter(([_, corr]: [string, any]) => Math.abs(corr) > 0.3)
+  .map(([pair, corr]: [string, any]) => `- ${pair.replace('_', ' & ')}: ${corr.toFixed(2)}`)
+  .join('\n')}
 ` : ''}
 
-SELECTED YEAR MONTHLY PERFORMANCE (ROI by month):
+MONTHLY PERFORMANCE (ROI by month for ${dataContext.context.selectedYear}):
 ${Object.entries(dataContext.selectedYearMonthlyPerformance).map(([channel, months]: [string, any]) => {
-                    const monthData = Object.entries(months)
-                        .map(([month, data]: [string, any]) => `${month}: ${formatROI(data.roi)}`)
-                        .join(', ');
-                    return `- ${channel}: ${monthData}`;
-                }).join('\n')}
+  const monthData = Object.entries(months)
+    .map(([month, data]: [string, any]) => `${month}: ${formatROI(data.roi)}`)
+    .join(', ');
+  return `- ${channel}: ${monthData}`;
+}).join('\n')}
 
 AVAILABLE VARIABLES: ${dataContext.variables.join(', ')}
 
 QUESTION: ${question}
 
-Please provide a detailed, data-driven analysis and recommendations based on this marketing performance data. Focus on:
-1. Key insights from the data
-2. Performance trends and patterns across years
-3. Specific recommendations for optimization
-4. Budget allocation suggestions
-5. Risk factors or areas of concern
-
-Use the actual data provided above and be specific with numbers and percentages where relevant.`;
+Answer concisely and directly. Provide specific numbers when asked.`;
 }
 
 /**

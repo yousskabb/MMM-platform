@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import ReactMarkdown from 'react-markdown';
 import { FilterState, ChatMessage } from '../../types';
 import { callLLMAPI, LLMProviders } from '../../services/llmService';
 import { Send, Sparkles, User, Settings } from 'lucide-react';
@@ -215,7 +216,9 @@ What would you like to know about your marketing data?`,
                     : 'bg-slate-100 text-slate-800'
                     }`}
                 >
-                  <div className="whitespace-pre-wrap">{message.content}</div>
+                  <div className="prose prose-sm max-w-none">
+                    <ReactMarkdown>{message.content}</ReactMarkdown>
+                  </div>
                   <div className={`text-xs mt-1 ${message.role === 'user' ? 'text-primary-200' : 'text-slate-500'
                     }`}>
                     {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
