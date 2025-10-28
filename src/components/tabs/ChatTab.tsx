@@ -26,7 +26,7 @@ What would you like to know about your marketing data?`,
       timestamp: new Date()
     }
   ]);
-  
+
   const [inputValue, setInputValue] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -34,36 +34,44 @@ What would you like to know about your marketing data?`,
   const [apiKey, setApiKey] = useState('');
   const [selectedProvider, setSelectedProvider] = useState('custom');
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  
+
   // Scroll to bottom whenever messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
-  
+
   // Update welcome message when filters change
   useEffect(() => {
     setMessages(prevMessages => [{
       id: '1',
       role: 'assistant',
-      content: `Hello! I'm your marketing data assistant. You can ask me questions about your marketing performance data for ${filters.brand} in ${filters.country}. For example:
-      
-- Which channel delivers the best ROI?
-- What is our total media investment?
-- Which media is least efficient?
-- What do you recommend for our budget allocation?`,
+      content: `Hello! I'm your AI marketing data assistant. I have access to all your marketing performance data for ${filters.brand} in ${filters.country} for ${filters.selectedYear}. 
+
+I can analyze:
+- Channel performance and ROI trends across all years
+- Budget allocation optimization
+- Year-over-year comparisons
+- Channel correlations and synergies
+- Monthly performance patterns
+- Strategic recommendations
+- Multi-year trend analysis
+
+The context updates automatically when you change filters or run simulations.
+
+What would you like to know about your marketing data?`,
       timestamp: new Date()
     }]);
   }, [filters]);
-  
+
   const handleSendMessage = async () => {
     if (!inputValue.trim() || isProcessing) return;
-    
+
     // Check if API is configured
     if (!apiEndpoint) {
       setShowSettings(true);
       return;
     }
-    
+
     // Add user message
     const userMessage: ChatMessage = {
       id: Date.now().toString(),
@@ -71,22 +79,22 @@ What would you like to know about your marketing data?`,
       content: inputValue,
       timestamp: new Date()
     };
-    
+
     setMessages(prevMessages => [...prevMessages, userMessage]);
     setInputValue('');
     setIsProcessing(true);
-    
+
     try {
       // Call LLM API with real data context
       const response = await callLLMAPI(inputValue, filters, apiEndpoint, apiKey);
-      
+
       const assistantMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
         content: response.answer,
         timestamp: new Date()
       };
-      
+
       setMessages(prevMessages => [...prevMessages, assistantMessage]);
     } catch (error) {
       const errorMessage: ChatMessage = {
@@ -95,20 +103,20 @@ What would you like to know about your marketing data?`,
         content: `I encountered an error: ${error instanceof Error ? error.message : 'Unknown error'}. Please check your API configuration.`,
         timestamp: new Date()
       };
-      
+
       setMessages(prevMessages => [...prevMessages, errorMessage]);
     } finally {
       setIsProcessing(false);
     }
   };
-  
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
     }
   };
-  
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -121,7 +129,7 @@ What would you like to know about your marketing data?`,
           {apiEndpoint ? 'Configured' : 'Setup API'}
         </button>
       </div>
-      
+
       {/* API Configuration Panel */}
       {showSettings && (
         <div className="card bg-slate-50 border border-slate-200">
@@ -139,7 +147,7 @@ What would you like to know about your marketing data?`,
                 <option value="claude">Anthropic Claude</option>
               </select>
             </div>
-            
+
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">API Endpoint</label>
               <input
@@ -150,7 +158,7 @@ What would you like to know about your marketing data?`,
                 className="input w-full"
               />
             </div>
-            
+
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">API Key (optional)</label>
               <input
@@ -161,7 +169,7 @@ What would you like to know about your marketing data?`,
                 className="input w-full"
               />
             </div>
-            
+
             <div className="flex gap-2">
               <button
                 onClick={() => setShowSettings(false)}
@@ -179,51 +187,48 @@ What would you like to know about your marketing data?`,
           </div>
         </div>
       )}
-      
+
       <div className="flex flex-col h-[calc(100vh-240px)] bg-white rounded-lg shadow-card overflow-hidden border border-slate-200">
         {/* Chat messages */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {messages.map(message => (
-            <div 
-              key={message.id} 
+            <div
+              key={message.id}
               className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in`}
             >
               <div className={`flex gap-3 max-w-3xl ${message.role === 'user' ? 'flex-row-reverse' : ''}`}>
-                <div className={`w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center ${
-                  message.role === 'user' ? 'bg-primary-100' : 'bg-secondary-100'
-                }`}>
+                <div className={`w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center ${message.role === 'user' ? 'bg-primary-100' : 'bg-secondary-100'
+                  }`}>
                   {message.role === 'user' ? (
                     <User size={16} className="text-primary-600" />
                   ) : (
                     <Sparkles size={16} className="text-secondary-600" />
                   )}
                 </div>
-                
-                <div 
-                  className={`p-3 rounded-lg ${
-                    message.role === 'user' 
-                      ? 'bg-primary-600 text-white' 
+
+                <div
+                  className={`p-3 rounded-lg ${message.role === 'user'
+                      ? 'bg-primary-600 text-white'
                       : 'bg-slate-100 text-slate-800'
-                  }`}
+                    }`}
                 >
                   <div className="whitespace-pre-wrap">{message.content}</div>
-                  <div className={`text-xs mt-1 ${
-                    message.role === 'user' ? 'text-primary-200' : 'text-slate-500'
-                  }`}>
+                  <div className={`text-xs mt-1 ${message.role === 'user' ? 'text-primary-200' : 'text-slate-500'
+                    }`}>
                     {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </div>
                 </div>
               </div>
             </div>
           ))}
-          
+
           {isProcessing && (
             <div className="flex justify-start animate-pulse">
               <div className="flex gap-3 max-w-3xl">
                 <div className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center bg-secondary-100">
                   <Sparkles size={16} className="text-secondary-600" />
                 </div>
-                
+
                 <div className="p-3 rounded-lg bg-slate-100 text-slate-800">
                   <div className="flex space-x-1">
                     <div className="w-2 h-2 rounded-full bg-slate-300 animate-bounce"></div>
@@ -234,10 +239,10 @@ What would you like to know about your marketing data?`,
               </div>
             </div>
           )}
-          
+
           <div ref={messagesEndRef} />
         </div>
-        
+
         {/* Input area */}
         <div className="border-t border-slate-200 p-4">
           <div className="flex gap-3 items-end">
@@ -251,9 +256,8 @@ What would you like to know about your marketing data?`,
               style={{ height: 'auto', maxHeight: '120px' }}
             />
             <button
-              className={`btn-primary p-3 rounded-full flex-shrink-0 ${
-                !inputValue.trim() || isProcessing ? 'opacity-50 cursor-not-allowed' : ''
-              }`}
+              className={`btn-primary p-3 rounded-full flex-shrink-0 ${!inputValue.trim() || isProcessing ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
               onClick={handleSendMessage}
               disabled={!inputValue.trim() || isProcessing}
             >
@@ -265,7 +269,7 @@ What would you like to know about your marketing data?`,
           </p>
         </div>
       </div>
-      
+
       <div className="card bg-slate-50 border border-slate-200">
         <h3 className="text-lg font-medium mb-3">Example Questions</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
