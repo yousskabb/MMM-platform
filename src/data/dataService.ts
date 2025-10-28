@@ -427,13 +427,12 @@ export function getLLMContext(filters: FilterState): any {
             totalContribution: yearContribution,
             totalROI: yearROI,
             totalSellOut: yearSellOut,
-            channelPerformance: yearData.channelData.map(channel => ({
-                channel: channel.channel,
-                investment: channel.investment,
-                contribution: channel.contribution,
-                roi: channel.roi,
-                mediaType: channel.mediaType
-            })),
+               channelPerformance: yearData.channelData.map(channel => ({
+                   channel: channel.channel,
+                   investment: channel.investment,
+                   contribution: channel.contribution,
+                   roi: channel.roi
+               })),
             monthlyPerformance: yearData.monthlyData.reduce((acc, item) => {
                 if (!acc[item.channel]) {
                     acc[item.channel] = {};
@@ -475,23 +474,10 @@ export function getLLMContext(filters: FilterState): any {
         // All Years Data
         allYearsData,
 
-        // Selected Year Channel Performance
-        selectedYearChannelPerformance: yearlyData.channelData.map(channel => ({
-            channel: channel.channel,
-            investment: channel.investment,
-            contribution: channel.contribution,
-            roi: channel.roi,
-            mediaType: channel.mediaType
-        })),
 
 
 
 
-        // Weekly Trends
-        weeklyTrends: {
-            contributions: yearlyData.contributions.slice(-12), // Last 12 weeks
-            investments: yearlyData.investments.slice(-12)
-        },
 
         // Variables list
         variables: yearlyData.variables

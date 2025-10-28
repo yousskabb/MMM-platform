@@ -118,28 +118,6 @@ const LLMContextTab: React.FC<LLMContextTabProps> = ({ filters }) => {
                     </div>
                 </div>
 
-                {/* Selected Year KPIs */}
-                <div className="bg-white rounded-lg border border-slate-200 p-4">
-                    <h3 className="text-lg font-medium text-slate-800 mb-3">Selected Year KPIs ({context.context?.selectedYear})</h3>
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div>
-                            <span className="font-medium text-slate-600">Total Investment:</span>
-                            <span className="ml-2 text-slate-800">{formatValue(context.selectedYearKPIs?.totalInvestment)}</span>
-                        </div>
-                        <div>
-                            <span className="font-medium text-slate-600">Total Contribution:</span>
-                            <span className="ml-2 text-slate-800">{formatValue(context.selectedYearKPIs?.totalContribution)}</span>
-                        </div>
-                        <div>
-                            <span className="font-medium text-slate-600">Total ROI:</span>
-                            <span className="ml-2 text-slate-800">{formatValue(context.selectedYearKPIs?.totalROI)}x</span>
-                        </div>
-                        <div>
-                            <span className="font-medium text-slate-600">Total Sell Out:</span>
-                            <span className="ml-2 text-slate-800">{formatValue(context.selectedYearKPIs?.totalSellOut)}</span>
-                        </div>
-                    </div>
-                </div>
 
                 {/* All Years Data Summary */}
                 <div className="bg-white rounded-lg border border-slate-200 p-4">
