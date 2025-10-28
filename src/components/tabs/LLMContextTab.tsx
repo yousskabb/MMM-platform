@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import JsonView from '@uiw/react-json-view';
 import { FilterState } from '../../types';
 import { getLLMContext } from '../../data/dataService';
 import { Eye, Copy, Check } from 'lucide-react';
@@ -171,13 +172,26 @@ const LLMContextTab: React.FC<LLMContextTabProps> = ({ filters }) => {
           </div>
         </div>
 
-                {/* Raw JSON Context */}
-                <div className="bg-slate-50 rounded-lg border border-slate-200 p-4">
-                    <h3 className="text-lg font-medium text-slate-800 mb-3">Raw JSON Context</h3>
-                    <pre className="text-xs text-slate-600 overflow-auto max-h-96 bg-white p-3 rounded border">
-                        {JSON.stringify(context, null, 2)}
-                    </pre>
-                </div>
+        {/* Interactive JSON Context */}
+        <div className="bg-slate-50 rounded-lg border border-slate-200 p-4">
+          <h3 className="text-lg font-medium text-slate-800 mb-3">Interactive JSON Context</h3>
+          <div className="bg-white rounded border overflow-hidden">
+            <JsonView
+              value={context}
+              style={{
+                backgroundColor: '#ffffff',
+                fontSize: '12px',
+                maxHeight: '500px',
+                overflow: 'auto'
+              }}
+              displayDataTypes={false}
+              displayObjectSize={false}
+              enableClipboard={true}
+              collapsed={2}
+              theme="light"
+            />
+          </div>
+        </div>
             </div>
         </div>
     );
