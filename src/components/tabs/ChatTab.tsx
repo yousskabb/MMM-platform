@@ -149,23 +149,26 @@ What would you like to know about your marketing data?`,
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">API Endpoint</label>
+              <label className="block text-sm font-medium text-slate-700 mb-2">Azure OpenAI Endpoint</label>
               <input
                 type="text"
                 value={apiEndpoint}
                 onChange={(e) => setApiEndpoint(e.target.value)}
-                placeholder="https://your-api-endpoint.com/chat"
+                placeholder="https://your-resource.openai.azure.com/openai/deployments/your-deployment/chat/completions"
                 className="input w-full"
               />
+              <p className="text-xs text-slate-500 mt-1">
+                Format: https://your-resource.openai.azure.com/openai/deployments/your-deployment/chat/completions
+              </p>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">API Key (optional)</label>
+              <label className="block text-sm font-medium text-slate-700 mb-2">Azure OpenAI API Key</label>
               <input
                 type="password"
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
-                placeholder="Your API key"
+                placeholder="Your Azure OpenAI API key"
                 className="input w-full"
               />
             </div>

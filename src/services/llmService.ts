@@ -11,59 +11,85 @@ interface LLMResponse {
  * Call LLM API with marketing data context
  */
 export async function callLLMAPI(
-    question: string,
-    filters: FilterState,
-    apiEndpoint: string,
-    apiKey?: string
+  question: string, 
+  filters: FilterState, 
+  apiEndpoint: string,
+  apiKey?: string
 ): Promise<LLMResponse> {
-    try {
-        // Get comprehensive data context
-        const dataContext = getLLMContext(filters);
-
-        if (!dataContext) {
-            return {
-                success: false,
-                answer: "Sorry, I don't have access to the data right now. Please try again later.",
-                error: "No data context available"
-            };
-        }
-
-        // Prepare the prompt with context
-        const prompt = buildPrompt(question, dataContext);
-
-        // Make API call
-        const response = await fetch(apiEndpoint, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                ...(apiKey && { 'Authorization': `Bearer ${apiKey}` })
-            },
-            body: JSON.stringify({
-                prompt,
-                context: dataContext,
-                question
-            })
-        });
-
-        if (!response.ok) {
-            throw new Error(`API call failed: ${response.status} ${response.statusText}`);
-        }
-
-        const result = await response.json();
-
-        return {
-            success: true,
-            answer: result.answer || result.response || result.message || "I couldn't generate a response."
-        };
-
-    } catch (error) {
-        console.error('LLM API Error:', error);
-        return {
-            success: false,
-            answer: "I'm sorry, I encountered an error while processing your question. Please try again.",
-            error: error instanceof Error ? error.message : 'Unknown error'
-        };
+  try {
+    // Get comprehensive data context
+    const dataContext = getLLMContext(filters);
+    
+    if (!dataContext) {
+      return {
+        success: false,
+        answer: "Sorry, I don't have access to the data right now. Please try again later.",
+        error: "No data context available"
+      };
     }
+
+    // Prepare the prompt with context
+    const prompt = buildPrompt(question, dataContext);
+    
+    // Prepare Azure OpenAI request body
+    const requestBody = {
+      messages: [
+        {
+          role: "system",
+          content: "You are a marketing analytics expert. Provide detailed, data-driven analysis and recommendations based on the marketing performance data provided."
+        },
+        {
+          role: "user",
+          content: prompt
+        }
+      ],
+      max_tokens: 2000,
+      temperature: 0.7,
+      top_p: 0.9,
+      frequency_penalty: 0,
+      presence_penalty: 0
+    };
+    
+    // Make API call with proper Azure OpenAI headers
+    const response = await fetch(apiEndpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+        'api-version': '2024-02-15-preview' // Azure OpenAI API version
+      },
+      body: JSON.stringify(requestBody)
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`API call failed: ${response.status} ${response.statusText} - ${errorText}`);
+    }
+
+    const result = await response.json();
+    
+    // Parse Azure OpenAI response format
+    let answer = "I couldn't generate a response.";
+    
+    if (result.choices && result.choices.length > 0) {
+      answer = result.choices[0].message?.content || answer;
+    } else if (result.error) {
+      throw new Error(`API Error: ${result.error.message || 'Unknown error'}`);
+    }
+    
+    return {
+      success: true,
+      answer: answer
+    };
+
+  } catch (error) {
+    console.error('LLM API Error:', error);
+    return {
+      success: false,
+      answer: "I'm sorry, I encountered an error while processing your question. Please try again.",
+      error: error instanceof Error ? error.message : 'Unknown error'
+    };
+  }
 }
 
 /**
