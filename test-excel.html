@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Excel Test</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+
+<body>
+    <h1>Excel File Test</h1>
+    <button onclick="testExcel()">Test Excel Loading</button>
+    <div id="result"></div>
+
+    <script>
+        async function testExcel() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = 'Loading...';
+
+            try {
+                console.log('Fetching Excel file...');
+                const response = await fetch('/data/data.xlsx');
+                console.log('Response status:', response.status);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const arrayBuffer = await response.arrayBuffer();
+                console.log('File loaded, size:', arrayBuffer.byteLength);
+
+                const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+                console.log('Workbook parsed successfully');
+                console.log('Sheet names:', workbook.SheetNames);
+
+                let html = '<h3>Excel File Analysis:</h3>';
+                html += '<p><strong>Sheet Names:</strong> ' + workbook.SheetNames.join(', ') + '</p>';
+
+                // Check each sheet
+                workbook.SheetNames.forEach(sheetName => {
+                    const sheet = workbook.Sheets[sheetName];
+                    const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+                    html += `<h4>Sheet: ${sheetName}</h4>`;
+                    html += `<p>Rows: ${jsonData.length}</p>`;
+                    if (jsonData.length > 0) {
+                        html += `<p>First row: ${JSON.stringify(jsonData[0])}</p>`;
+                        html += `<p>Columns: ${jsonData[0].length}</p>`;
+                    }
+                });
+
+                resultDiv.innerHTML = html;
+
+            } catch (error) {
+                console.error('Error:', error);
+                resultDiv.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+            }
+        }
+    </script>
+</body>
+
+</html>
