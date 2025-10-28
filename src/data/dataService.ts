@@ -53,8 +53,11 @@ export async function loadExcelData(): Promise<void> {
 }
 
 /**
- * Get filtered data based on year
+ * Get the cached raw data (for historical analysis)
  */
+export function getCachedData(): ParsedExcelData | null {
+    return cachedData;
+}
 export function filterDataByYear(year: number): YearlyData {
     if (!cachedData) {
         throw new Error('Excel data not loaded. Call loadExcelData() first.');
