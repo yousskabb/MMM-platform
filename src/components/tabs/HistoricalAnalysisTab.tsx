@@ -2,18 +2,22 @@ import React, { useState } from 'react';
 import { LineChart as LineChartIcon, BarChart as BarChartIcon } from 'lucide-react';
 import { FilterState } from '../../types';
 import {
-    ComposedChart,
-    Line,
-    Area,
-    XAxis,
-    YAxis,
-    CartesianGrid,
-    Tooltip,
-    Legend,
-    ResponsiveContainer
+  ComposedChart,
+  Line,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  LabelList,
+  Cell
 } from 'recharts';
 import { getCachedData, isDataLoaded } from '../../data/dataService';
-import { formatNumberAxis, formatNumberDetailed } from '../../utils/numberFormatter';
+import { formatNumberAxis, formatNumberDetailed, formatNumber } from '../../utils/numberFormatter';
 import { getVariableColors } from '../../utils/colorGenerator';
 
 interface HistoricalAnalysisTabProps {
@@ -28,7 +32,7 @@ interface MonthlyData {
 }
 
 const HistoricalAnalysisTab: React.FC<HistoricalAnalysisTabProps> = ({ filters }) => {
-  const [selectedMetric, setSelectedMetric] = useState<'roi' | 'contribution' | 'investment'>('roi');
+    const [selectedMetric, setSelectedMetric] = useState<'roi' | 'contribution' | 'investment'>('roi');
     // Check if data is loaded before trying to use it
     if (!isDataLoaded()) {
         return (
@@ -135,44 +139,44 @@ const HistoricalAnalysisTab: React.FC<HistoricalAnalysisTabProps> = ({ filters }
         yearData.totalInvestment += weekInvestment;
     });
 
-  // Convert to array and sort by year
-  yearlyTotals.push(...Array.from(yearlyMap.entries()).map(([year, data]) => ({
-    year,
-    ...data
-  })));
-  yearlyTotals.sort((a, b) => a.year - b.year);
+    // Convert to array and sort by year
+    yearlyTotals.push(...Array.from(yearlyMap.entries()).map(([year, data]) => ({
+        year,
+        ...data
+    })));
+    yearlyTotals.sort((a, b) => a.year - b.year);
 
-  // Calculate yearly performance by channel for the table
-  const yearlyChannelData: { [year: number]: { [channel: string]: { investment: number; contribution: number; roi: number } } } = {};
-  const availableYears = yearlyTotals.map(y => y.year);
+    // Calculate yearly performance by channel for the table
+    const yearlyChannelData: { [year: number]: { [channel: string]: { investment: number; contribution: number; roi: number } } } = {};
+    const availableYears = yearlyTotals.map(y => y.year);
 
-  // Initialize yearly channel data
-  availableYears.forEach(year => {
-    yearlyChannelData[year] = {};
-    contributionVariables.forEach(variable => {
-      yearlyChannelData[year][variable] = { investment: 0, contribution: 0, roi: 0 };
+    // Initialize yearly channel data
+    availableYears.forEach(year => {
+        yearlyChannelData[year] = {};
+        contributionVariables.forEach(variable => {
+            yearlyChannelData[year][variable] = { investment: 0, contribution: 0, roi: 0 };
+        });
     });
-  });
 
-  // Process contributions data by year and channel
-  allContributions.forEach(week => {
-    const year = week.date.getFullYear();
-    if (yearlyChannelData[year]) {
-      contributionVariables.forEach(variable => {
-        yearlyChannelData[year][variable].contribution += (week[variable] as number || 0);
-      });
-    }
-  });
+    // Process contributions data by year and channel
+    allContributions.forEach(week => {
+        const year = week.date.getFullYear();
+        if (yearlyChannelData[year]) {
+            contributionVariables.forEach(variable => {
+                yearlyChannelData[year][variable].contribution += (week[variable] as number || 0);
+            });
+        }
+    });
 
-  // Process investments data by year and channel
-  allInvestments.forEach(week => {
-    const year = week.date.getFullYear();
-    if (yearlyChannelData[year]) {
-      contributionVariables.forEach(variable => {
-        yearlyChannelData[year][variable].investment += (week[variable] as number || 0);
-      });
-    }
-  });
+    // Process investments data by year and channel
+    allInvestments.forEach(week => {
+        const year = week.date.getFullYear();
+        if (yearlyChannelData[year]) {
+            contributionVariables.forEach(variable => {
+                yearlyChannelData[year][variable].investment += (week[variable] as number || 0);
+            });
+        }
+    });
 
   // Calculate ROI for each channel per year
   availableYears.forEach(year => {
@@ -181,6 +185,107 @@ const HistoricalAnalysisTab: React.FC<HistoricalAnalysisTabProps> = ({ filters }
       data.roi = data.investment > 0 ? data.contribution / data.investment : 0;
     });
   });
+
+  // Generate multi-year waterfall data
+  const generateMultiYearWaterfallData = () => {
+    const waterfallData: any[] = [];
+    
+    if (availableYears.length < 2) {
+      return waterfallData;
+    }
+
+    // Start with the earliest year's sales
+    const firstYear = availableYears[0];
+    const firstYearSales = yearlyChannelData[firstYear] ? 
+      Object.values(yearlyChannelData[firstYear]).reduce((sum, channel) => sum + channel.contribution, 0) : 0;
+    
+    waterfallData.push({
+      name: `${firstYear} Sales`,
+      value: firstYearSales,
+      base: 0,
+      step: firstYearSales,
+      isTotal: true,
+      displayValue: firstYearSales,
+      color: '#94a3b8'
+    });
+
+    // Process each year transition
+    for (let i = 0; i < availableYears.length - 1; i++) {
+      const currentYear = availableYears[i];
+      const nextYear = availableYears[i + 1];
+      
+      const currentYearSales = yearlyChannelData[currentYear] ? 
+        Object.values(yearlyChannelData[currentYear]).reduce((sum, channel) => sum + channel.contribution, 0) : 0;
+      const nextYearSales = yearlyChannelData[nextYear] ? 
+        Object.values(yearlyChannelData[nextYear]).reduce((sum, channel) => sum + channel.contribution, 0) : 0;
+
+      // Calculate channel differences
+      const channelDifferences: { channel: string; difference: number; color: string }[] = [];
+      
+      contributionVariables.forEach(variable => {
+        const currentChannelData = yearlyChannelData[currentYear]?.[variable];
+        const nextChannelData = yearlyChannelData[nextYear]?.[variable];
+        
+        if (currentChannelData && nextChannelData) {
+          const currentContribution = currentChannelData.contribution;
+          const nextContribution = nextChannelData.contribution;
+          const difference = nextContribution - currentContribution;
+          
+          if (Math.abs(difference) > 1000) { // Only include significant changes
+            channelDifferences.push({
+              channel: variable,
+              difference,
+              color: variableColors[variable]
+            });
+          }
+        }
+      });
+
+      // Sort by magnitude and add channel differences
+      channelDifferences
+        .sort((a, b) => Math.abs(b.difference) - Math.abs(a.difference))
+        .forEach(channel => {
+          waterfallData.push({
+            name: `${channel.channel} (${currentYear}-${nextYear})`,
+            value: channel.difference,
+            base: 0,
+            step: channel.difference,
+            isTotal: false,
+            displayValue: channel.difference,
+            color: channel.color
+          });
+        });
+
+      // Add unexplained variance if significant
+      const totalChannelDifference = channelDifferences.reduce((sum, ch) => sum + ch.difference, 0);
+      const unexplainedVariance = (nextYearSales - currentYearSales) - totalChannelDifference;
+      
+      if (Math.abs(unexplainedVariance) > 1000) {
+        waterfallData.push({
+          name: `Unexplained (${currentYear}-${nextYear})`,
+          value: unexplainedVariance,
+          base: 0,
+          step: unexplainedVariance,
+          isTotal: false,
+          displayValue: unexplainedVariance,
+          color: '#94a3b8'
+        });
+      }
+
+      // Add next year's sales total
+      waterfallData.push({
+        name: `${nextYear} Sales`,
+        value: nextYearSales,
+        base: 0,
+        step: nextYearSales,
+        isTotal: true,
+        displayValue: nextYearSales,
+        color: '#94a3b8'
+      });
+    }
+
+    return waterfallData;
+  };
 
     return (
         <div className="space-y-6">
@@ -269,12 +374,12 @@ const HistoricalAnalysisTab: React.FC<HistoricalAnalysisTabProps> = ({ filters }
                             margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
                         >
                             <CartesianGrid strokeDasharray="3 3" />
-              <XAxis
-                dataKey="month"
-                tickFormatter={(value) => value}
-                interval="auto"
-                tickCount={12}
-              />
+                            <XAxis
+                                dataKey="month"
+                                tickFormatter={(value) => value}
+                                interval="auto"
+                                tickCount={12}
+                            />
                             <YAxis
                                 tickFormatter={(value) => formatNumberAxis(value)}
                                 tick={{ fontSize: 11 }}
@@ -326,8 +431,8 @@ const HistoricalAnalysisTab: React.FC<HistoricalAnalysisTabProps> = ({ filters }
                             />
                         </ComposedChart>
                     </ResponsiveContainer>
-        </div>
-      </div>
+                </div>
+            </div>
 
       {/* Yearly Performance by Channel Table */}
       <div className="card">
@@ -435,8 +540,87 @@ const HistoricalAnalysisTab: React.FC<HistoricalAnalysisTabProps> = ({ filters }
           </table>
         </div>
       </div>
-    </div>
-  );
+
+      {/* Giant Waterfall Chart - All Years */}
+      <div className="card">
+        <h3 className="text-lg font-medium mb-4 flex items-center gap-2">
+          <BarChartIcon size={18} className="text-primary-600" />
+          Multi-Year Performance Waterfall ({availableYears[0]} - {availableYears[availableYears.length - 1]})
+        </h3>
+        <div className="h-96 overflow-x-auto">
+          <ResponsiveContainer width="100%" height="100%" minWidth={availableYears.length * 100}>
+            <BarChart
+              data={generateMultiYearWaterfallData()}
+              margin={{ top: 20, right: 30, left: 20, bottom: 100 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis
+                dataKey="name"
+                angle={-45}
+                textAnchor="end"
+                height={100}
+                interval={0}
+                tick={{ fontSize: 10 }}
+              />
+              <YAxis
+                tickFormatter={(value) => formatNumberAxis(value)}
+                tick={{ fontSize: 11 }}
+                width={80}
+              />
+              <Tooltip
+                formatter={(value, name) => [formatNumberDetailed(value as number), name]}
+                labelFormatter={(label) => `Period: ${label}`}
+                contentStyle={{
+                  backgroundColor: 'white',
+                  border: '1px solid #ccc',
+                  borderRadius: '8px'
+                }}
+              />
+              <Legend />
+              <Bar dataKey="base" stackId="stack" fill="transparent" stroke="transparent" />
+              <Bar dataKey="step" name="value" stackId="stack" radius={[4, 4, 0, 0]}>
+                {generateMultiYearWaterfallData().map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.color} />
+                ))}
+              </Bar>
+                <LabelList
+                  content={(props: any) => {
+                    const { payload, index } = props;
+                    if (!payload || index === undefined) return null;
+
+                    const entry = generateMultiYearWaterfallData()[index];
+                    if (entry.isTotal) return null;
+
+                    const barHeight = Math.abs(entry.step);
+                    const maxValue = Math.max(...generateMultiYearWaterfallData().map(e => e.base + Math.abs(e.step)));
+                    const minBarHeight = maxValue * 0.01;
+
+                    if (barHeight < minBarHeight) return null;
+
+                    let label = formatNumber(entry.displayValue || entry.step);
+                    label = `${entry.step > 0 ? '+' : ''}${label}`;
+
+                    return (
+                      <text
+                        x={props.x + props.width / 2}
+                        y={props.y + props.height + 15}
+                        fill={entry.step > 0 ? '#16a34a' : '#dc2626'}
+                        textAnchor="middle"
+                        fontSize={10}
+                        fontWeight="600"
+                      >
+                        {label}
+                      </text>
+                    );
+                  }}
+                />
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+        </div>
+    );
 };
 
 export default HistoricalAnalysisTab;
