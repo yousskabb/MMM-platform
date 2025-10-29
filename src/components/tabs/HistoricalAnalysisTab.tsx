@@ -499,35 +499,10 @@ const HistoricalAnalysisTab: React.FC<HistoricalAnalysisTabProps> = ({ filters }
                         }
                       }
 
-                      // Calculate color intensity based on value
-                      let opacity = 0.1;
-                      if (value > 0) {
-                        if (selectedMetric === 'roi') {
-                          // For ROI, normalize to 0-3 range
-                          const normalizedValue = Math.min(value / 2, 1);
-                          opacity = 0.1 + (normalizedValue * 0.6);
-                        } else {
-                          // For contribution/investment, normalize based on max value across all years
-                          const maxValue = Math.max(...availableYears.map(y => {
-                            const data = yearlyChannelData[y]?.[variable];
-                            return selectedMetric === 'contribution' ? (data?.contribution || 0) : (data?.investment || 0);
-                          }));
-                          const normalizedValue = maxValue > 0 ? value / maxValue : 0;
-                          opacity = 0.1 + (normalizedValue * 0.6);
-                        }
-                      }
-
                       return (
                         <td
                           key={year}
                           className="text-center py-2 px-2 text-sm font-medium whitespace-nowrap"
-                          style={{
-                            backgroundColor: selectedMetric === 'roi' 
-                              ? `rgba(34, 197, 94, ${opacity})` // Green for ROI
-                              : selectedMetric === 'contribution'
-                              ? `rgba(59, 130, 246, ${opacity})` // Blue for contribution
-                              : `rgba(16, 185, 129, ${opacity})` // Green for investment
-                          }}
                         >
                           {displayValue}
                         </td>
