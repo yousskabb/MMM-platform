@@ -77,9 +77,10 @@ const generateROILineData = (scatterData: Array<{ x: number; y: number }>) => {
   ];
 };
 
-// Round to next thousand for axis limits
+// Round to next thousand for axis limits (always rounds up, even if already on thousand boundary)
 const roundToNextThousand = (value: number): number => {
-  return Math.ceil(value / 1000) * 1000;
+  if (value === 0) return 1000;
+  return Math.floor(value / 1000) * 1000 + 1000;
 };
 
 const ResponseCurvesTab: React.FC<ResponseCurvesTabProps> = () => {
@@ -102,8 +103,8 @@ const ResponseCurvesTab: React.FC<ResponseCurvesTabProps> = () => {
   // Calculate rounded axis limits based on investment data (x values)
   const maxInvestment = scatterData.length > 0 ? Math.max(...scatterData.map(d => d.x)) : 0;
   const maxContribution = scatterData.length > 0 ? Math.max(...scatterData.map(d => d.y)) : 0;
-  
-  const maxX = scatterData.length > 0 ? roundToNextThousand(maxInvestment) : 100 দেওয়া;
+
+  const maxX = scatterData.length > 0 ? roundToNextThousand(maxInvestment) : 10000;
   const maxY = scatterData.length > 0 ? roundToNextThousand(maxContribution) : 10000;
 
   // Format currency
@@ -175,10 +176,11 @@ const ResponseCurvesTab: React.FC<ResponseCurvesTabProps> = () => {
                 tickFormatter={formatCompactCurrency}
                 label={{ value: 'Investment', position: 'insideBottom', offset: -10, style: { fontSize: '14px', fontWeight: 'bold' } }}
                 domain={[0, maxX]}
-                allowDataOverflow={true}
+                allowDataOverflow={false}
                 allowDecimals={false}
+                padding={{ left: 0, right: 0 }}
               />
-              
+
               <YAxis
                 type="number"
                 dataKey="y"
@@ -187,8 +189,9 @@ const ResponseCurvesTab: React.FC<ResponseCurvesTabProps> = () => {
                 tickFormatter={formatCompactCurrency}
                 label={{ value: 'Contribution', angle: -90, position: 'insideLeft', offset: -10, style: { fontSize: '14px', fontWeight: 'bold' } }}
                 domain={[0, maxY]}
-                allowDataOverflow={true}
+                allowDataOverflow={false}
                 allowDecimals={false}
+                padding={{ top: 0, bottom: 0 }}
               />
 
               <Tooltip
