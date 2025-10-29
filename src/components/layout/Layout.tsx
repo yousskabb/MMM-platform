@@ -13,10 +13,11 @@ import ResponseCurvesTab from '../tabs/ResponseCurvesTab';
 import DataTab from '../tabs/DataTab';
 import LLMContextTab from '../tabs/LLMContextTab';
 import HistoricalAnalysisTab from '../tabs/HistoricalAnalysisTab';
+import ReportTab from '../tabs/ReportTab';
 import { loadExcelData, getAvailableYears } from '../../data/dataService';
 import { autoInitializeConversation } from '../../services/conversationLLMService';
 
-type Tab = 'recap' | 'synergies' | 'roi' | 'budget' | 'simulations' | 'response' | 'chat' | 'data' | 'llm-context' | 'historical';
+type Tab = 'recap' | 'synergies' | 'roi' | 'budget' | 'simulations' | 'response' | 'chat' | 'data' | 'llm-context' | 'historical' | 'report';
 
 interface TabConfig {
   id: Tab;
@@ -47,6 +48,7 @@ const Layout: React.FC = () => {
   const [dataLoaded, setDataLoaded] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [reportContent, setReportContent] = useState<string | null>(null);
 
   const handleTabChange = (tab: Tab) => {
     setActiveTab(tab);
@@ -75,7 +77,7 @@ const Layout: React.FC = () => {
         }
 
         setDataLoaded(true);
-        
+
         // Auto-initialize LLM conversation after data is loaded
         const yearsForLLM = getAvailableYears();
         if (yearsForLLM.length > 0) {
@@ -99,7 +101,7 @@ const Layout: React.FC = () => {
   const renderTabContent = () => {
     switch (activeTab) {
       case 'recap':
-        return <RecapTab filters={filters} />;
+        return <RecapTab filters={filters} onReportGenerated={setReportContent} onOpenReportTab={() => setActiveTab('report')} />;
       case 'synergies':
         return <SynergiesTab filters={filters} />;
       case 'roi':
@@ -118,8 +120,10 @@ const Layout: React.FC = () => {
         return <DataTab filters={filters} />;
       case 'llm-context':
         return <LLMContextTab filters={filters} />;
+      case 'report':
+        return <ReportTab filters={filters} reportContent={reportContent} />;
       default:
-        return <RecapTab filters={filters} />;
+        return <RecapTab filters={filters} onReportGenerated={setReportContent} onOpenReportTab={() => setActiveTab('report')} />;
     }
   };
 

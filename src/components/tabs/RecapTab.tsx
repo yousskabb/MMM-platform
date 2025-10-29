@@ -3,7 +3,8 @@ import {
   BarChart as BarChartIcon,
   LineChart as LineChartIcon,
   Euro,
-  TrendingUp
+  TrendingUp,
+  FileText
 } from 'lucide-react';
 import KPICard from '../ui/KPICard';
 import { FilterState } from '../../types';
@@ -24,12 +25,16 @@ import {
 } from 'recharts';
 import { filterDataByYear, isDataLoaded } from '../../data/dataService';
 import { formatNumber, formatNumberDetailed, formatNumberAxis } from '../../utils/numberFormatter';
+import { sendMessage, initializeConversation } from '../../services/conversationLLMService';
 
 interface RecapTabProps {
   filters: FilterState;
+  onReportGenerated?: (content: string) => void;
+  onOpenReportTab?: () => void;
 }
 
-const RecapTab: React.FC<RecapTabProps> = ({ filters }) => {
+const RecapTab: React.FC<RecapTabProps> = ({ filters, onReportGenerated, onOpenReportTab }) => {
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
 
   // Check if data is loaded before trying to use it
   if (!isDataLoaded()) {
@@ -43,6 +48,86 @@ const RecapTab: React.FC<RecapTabProps> = ({ filters }) => {
   // Get current year and previous year data
   const currentYear = filters.selectedYear;
   const previousYear = currentYear - 1;
+
+  // Function to generate business report
+  const generateBusinessReport = async () => {
+    console.log('Starting report generation...');
+    setIsGeneratingReport(true);
+
+    try {
+      const apiEndpoint = import.meta.env.VITE_LLM_API_ENDPOINT;
+      const apiKey = import.meta.env.VITE_LLM_API_KEY;
+
+      console.log('API Endpoint:', apiEndpoint ? 'Set' : 'Not set');
+      console.log('API Key:', apiKey ? 'Set' : 'Not set');
+
+      if (!apiEndpoint || !apiKey) {
+        console.log('Missing API credentials');
+        alert('LLM API credentials not configured. Please set VITE_LLM_API_ENDPOINT and VITE_LLM_API_KEY in your environment variables.');
+        return;
+      }
+
+      const reportPrompt = `Generate a comprehensive Marketing Mix Modeling (MMM) business report for ${currentYear}. 
+
+Please analyze the following aspects in detail with markdown formatting:
+
+## 1. Investment Analysis
+- Analyze total investment performance and trends
+- Compare investment allocation across channels
+- Identify investment efficiency and optimization opportunities
+
+## 2. Contribution Analysis  
+- Evaluate contribution performance and growth
+- Analyze contribution patterns by channel
+- Assess contribution effectiveness and ROI impact
+
+## 3. ROI Analysis
+- Calculate and analyze ROI performance by channel
+- Identify top and bottom performing channels
+- Provide ROI optimization recommendations
+
+## 4. Performance Evolution
+- Compare year-over-year performance trends
+- Highlight key performance indicators and changes
+- Identify growth opportunities and areas for improvement
+
+Please provide actionable insights, specific recommendations, and use data-driven analysis throughout the report.`;
+
+      console.log('Initializing conversation...');
+      // Initialize conversation if not already initialized
+      const initResponse = await initializeConversation(filters, apiEndpoint, apiKey);
+      console.log('Init response:', initResponse);
+
+      if (!initResponse.success) {
+        console.log('Init failed:', initResponse.error);
+        alert(`Failed to initialize conversation: ${initResponse.error || 'Unknown error'}`);
+        return;
+      }
+
+      console.log('Sending message...');
+      const response = await sendMessage(reportPrompt, apiEndpoint, apiKey);
+      console.log('Message response:', response);
+
+      if (response.success && response.answer) {
+        console.log('Report generated successfully, content length:', response.answer.length);
+        console.log('First 200 chars:', response.answer.substring(0, 200));
+        // Pass report content to parent and switch to report tab
+        if (onReportGenerated && onOpenReportTab) {
+          onReportGenerated(response.answer);
+          onOpenReportTab();
+        }
+      } else {
+        console.log('Report generation failed:', response.error);
+        alert(`Error: ${response.error || 'Failed to generate report'}`);
+      }
+    } catch (error) {
+      console.error('Error generating report:', error);
+      alert(`Error generating report: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      console.log('Report generation completed');
+      setIsGeneratingReport(false);
+    }
+  };
 
   // Get current year data
   const { channelData, contributions: weeklyContributions, monthlyData } = filterDataByYear(currentYear);
@@ -295,6 +380,14 @@ const RecapTab: React.FC<RecapTabProps> = ({ filters }) => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-semibold text-slate-800">Marketing Performance Recap ({currentYear})</h1>
+        <button
+          onClick={generateBusinessReport}
+          disabled={isGeneratingReport}
+          className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-6 py-3 rounded-lg font-semibold text-sm transition-colors duration-200 flex items-center gap-2 shadow-lg hover:shadow-xl disabled:cursor-not-allowed"
+        >
+          <FileText size={18} />
+          {isGeneratingReport ? 'Generating...' : 'Generate Business Report'}
+        </button>
       </div>
 
       {/* 1. KPI Cards with correct calculations */}
@@ -666,6 +759,7 @@ const RecapTab: React.FC<RecapTabProps> = ({ filters }) => {
           </ResponsiveContainer>
         </div>
       </div>
+
 
     </div>
   );
