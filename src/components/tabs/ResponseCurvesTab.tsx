@@ -102,9 +102,9 @@ const ResponseCurvesTab: React.FC<ResponseCurvesTabProps> = () => {
   // Calculate rounded axis limits based on investment data (x values)
   const maxInvestment = scatterData.length > 0 ? Math.max(...scatterData.map(d => d.x)) : 0;
   const maxContribution = scatterData.length > 0 ? Math.max(...scatterData.map(d => d.y)) : 0;
-
-  const maxX = roundToNextThousand(maxInvestment);
-  const maxY = roundToNextThousand(maxContribution);
+  
+  const maxX = scatterData.length > 0 ? roundToNextThousand(maxInvestment) : 100 দেওয়া;
+  const maxY = scatterData.length > 0 ? roundToNextThousand(maxContribution) : 10000;
 
   // Format currency
   const formatCurrency = (value: number) => {
