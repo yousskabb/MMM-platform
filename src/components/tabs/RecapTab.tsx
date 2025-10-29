@@ -67,31 +67,50 @@ const RecapTab: React.FC<RecapTabProps> = ({ filters, onReportGenerated, onOpenR
         return;
       }
 
-      const reportPrompt = `Generate a comprehensive Marketing Mix Modeling (MMM) business report for ${currentYear}. 
+      const reportPrompt = `Generate a professional Marketing Mix Modeling (MMM) Executive Report for ${currentYear}. This should read like a real business report written by a marketing analytics team for senior management.
 
-Please analyze the following aspects in detail with markdown formatting:
+WRITING STYLE REQUIREMENTS:
+- Professional, business-focused tone - like a real corporate report
+- No emojis or casual language
+- Use business terminology and professional insights
+- Write in past tense when describing results ("We invested €2.3M across 15 channels" not "The investment was €2.3M")
+- Use "our", "we", "the company" when referring to the business
+- Include executive summary language ("In summary", "Overall", "Notably")
+- Sound confident and data-driven, not AI-generated
+- Use specific numbers with proper formatting (€1.9M, 1.63x ROI)
 
-## 1. Investment Analysis
-- Analyze total investment performance and trends
-- Compare investment allocation across channels
-- Identify investment efficiency and optimization opportunities
+REPORT STRUCTURE:
 
-## 2. Contribution Analysis  
-- Evaluate contribution performance and growth
-- Analyze contribution patterns by channel
-- Assess contribution effectiveness and ROI impact
+## Executive Summary
+Brief high-level overview of the year's performance (2-3 paragraphs)
 
-## 3. ROI Analysis
-- Calculate and analyze ROI performance by channel
-- Identify top and bottom performing channels
-- Provide ROI optimization recommendations
+## Investment Performance
+- Total investment analysis with year-over-year comparison
+- Investment allocation breakdown by channel (use a table)
+- Budget efficiency assessment
 
-## 4. Performance Evolution
-- Compare year-over-year performance trends
-- Highlight key performance indicators and changes
-- Identify growth opportunities and areas for improvement
+## Contribution Analysis
+- Total contribution performance with growth metrics
+- Channel-level contribution breakdown
+- Effectiveness of marketing spend
 
-Please provide actionable insights, specific recommendations, and use data-driven analysis throughout the report.`;
+## ROI Analysis
+- Overall ROI performance
+- Channel-by-channel ROI comparison (use a table)
+- Identification of highest and lowest performing channels
+- ROI optimization opportunities
+
+## Performance Trends
+- Year-over-year comparison with specific numbers
+- Key performance indicators evolution
+- Market and competitive context where applicable
+
+## Strategic Recommendations
+- 3-5 specific, actionable recommendations prioritized by impact
+- Each recommendation should include: what, why, expected impact
+- Use specific numbers and data to support each recommendation
+
+Use actual numbers from the data provided in the context. Write as if you are presenting to the CEO and board of directors. Professional, authoritative, and data-driven.`;
 
       console.log('Initializing conversation...');
       // Initialize conversation if not already initialized

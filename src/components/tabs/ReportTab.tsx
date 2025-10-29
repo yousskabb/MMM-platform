@@ -2,6 +2,7 @@ import React from 'react';
 import { FileText } from 'lucide-react';
 import { FilterState } from '../../types';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 interface ReportTabProps {
     filters: FilterState;
@@ -38,8 +39,8 @@ const ReportTab: React.FC<ReportTabProps> = ({ filters, reportContent }) => {
 
             {/* Report Content with ReactMarkdown */}
             <div className="card bg-white">
-                <div className="prose prose-slate max-w-none prose-headings:text-slate-900 prose-headings:font-bold prose-p:text-slate-700 prose-p:leading-relaxed prose-strong:text-slate-900 prose-ul:text-slate-700 prose-ol:text-slate-700 prose-code:text-blue-600 prose-blockquote:text-slate-600">
-                    <ReactMarkdown>{reportContent}</ReactMarkdown>
+                <div className="prose prose-slate max-w-none prose-headings:text-slate-900 prose-headings:font-bold prose-p:text-slate-700 prose-p:leading-relaxed prose-strong:text-slate-900 prose-ul:text-slate-700 prose-ol:text-slate-700 prose-code:text-blue-600 prose-blockquote:text-slate-600 prose-table:text-sm prose-th:text-slate-800 prose-td:text-slate-700">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{reportContent}</ReactMarkdown>
                 </div>
             </div>
         </div>
