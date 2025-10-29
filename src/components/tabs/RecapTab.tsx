@@ -667,69 +667,6 @@ const RecapTab: React.FC<RecapTabProps> = ({ filters }) => {
         </div>
       </div>
 
-      {/* 5. Monthly Performance by Channel Table */}
-      <div className="card">
-        <h3 className="text-lg font-medium mb-4 flex items-center gap-2">
-          <BarChartIcon size={18} className="text-primary-600" />
-          Monthly Performance by Channel (ROI)
-        </h3>
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse">
-            <thead>
-              <tr className="border-b border-slate-200">
-                <th className="text-left py-2 px-3 font-semibold text-slate-700 bg-slate-50 sticky left-0 z-10">Channel</th>
-                {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map(month => (
-                  <th key={month} className="text-center py-2 px-2 font-semibold text-slate-700 bg-slate-50 min-w-[70px]">
-                    {month}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {channelData.map((channel) => {
-                const channelMonthlyData = monthlyData.filter(m => m.channel === channel.channel);
-
-                return (
-                  <tr key={channel.channel} className="border-b border-slate-100 hover:bg-slate-50">
-                    <td className="py-2 px-3 font-medium text-slate-800 sticky left-0 bg-white z-10 whitespace-nowrap">
-                      <div className="flex items-center gap-2">
-                        <div
-                          className="w-3 h-3 rounded-full flex-shrink-0"
-                          style={{ backgroundColor: channel.color }}
-                        />
-                        <span>{channel.channel}</span>
-                      </div>
-                    </td>
-                    {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map(month => {
-                      const monthData = channelMonthlyData.find(m => m.month === month);
-                      const roi = monthData?.roi || 0;
-
-                      // Calculate green intensity based on ROI (normalize to 0-1 scale)
-                      // Assuming ROI ranges from 0 to ~3
-                      const normalizedRoi = Math.min(roi / 2, 1); // Scale to max of 2x ROI
-                      const intensity = Math.max(0, Math.min(1, normalizedRoi));
-                      // Opacity range from 0.1 (almost white) to 0.7 (dark green) for better contrast
-                      const opacity = 0.1 + (intensity * 0.6);
-
-                      return (
-                        <td
-                          key={month}
-                          className="text-center py-2 px-2 text-sm font-medium whitespace-nowrap"
-                          style={{
-                            backgroundColor: `rgba(34, 197, 94, ${opacity})`, // Light green to dark green
-                          }}
-                        >
-                          {roi > 0 ? `${roi.toFixed(2)}x` : '-'}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
     </div>
   );
 };
