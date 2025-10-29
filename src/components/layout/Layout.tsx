@@ -26,12 +26,12 @@ interface TabConfig {
 
 const tabConfig: TabConfig[] = [
   { id: 'recap', label: 'Recap', icon: <Activity size={20} /> },
+  { id: 'historical', label: 'Historical Analysis', icon: <History size={20} /> },
   { id: 'synergies', label: 'Synergies', icon: <LineChart size={20} /> },
   { id: 'roi', label: 'ROI', icon: <BarChart3 size={20} /> },
   { id: 'budget', label: 'Budget Planning', icon: <PieChart size={20} /> },
   { id: 'response', label: 'Response Curves', icon: <TrendingUp size={20} /> },
   { id: 'simulations', label: 'Simulations', icon: <Calculator size={20} /> },
-  { id: 'historical', label: 'Historical Analysis', icon: <History size={20} /> },
   { id: 'chat', label: 'Chat with Your Data', icon: <MessageCircle size={20} /> },
   { id: 'data', label: 'Data', icon: <Database size={20} /> },
   { id: 'llm-context', label: 'LLM Context', icon: <Eye size={20} /> },
