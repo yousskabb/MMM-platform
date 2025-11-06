@@ -18,6 +18,7 @@ const generateScatterData = (selectedVariable: string) => {
     x: number;
     y: number;
     date: string;
+    formattedDate: string;
     year: number;
     month: string;
   }> = [];
@@ -42,6 +43,7 @@ const generateScatterData = (selectedVariable: string) => {
         x: investment,
         y: contribution,
         date: week.date.toISOString(),
+        formattedDate: date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
         year: date.getFullYear(),
         month: date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
       });
@@ -59,7 +61,7 @@ const getAvailableVariables = () => {
   return cachedData.variables.sort();
 };
 
-// Generate ROI = 1 reference line data
+// Generate y=x reference line data (ROI = 1)
 const generateROILineData = (scatterData: Array<{ x: number; y: number }>) => {
   if (scatterData.length === 0) return [];
 
@@ -75,12 +77,6 @@ const generateROILineData = (scatterData: Array<{ x: number; y: number }>) => {
     { x: min, y: min },
     { x: max, y: max }
   ];
-};
-
-// Round to next thousand for axis limits (always rounds up, even if already on thousand boundary)
-const roundToNextThousand = (value: number): number => {
-  if (value === 0) return 1000;
-  return Math.floor(value / 1000) * 1000 + 1000;
 };
 
 const ResponseCurvesTab: React.FC<ResponseCurvesTabProps> = () => {
@@ -100,13 +96,6 @@ const ResponseCurvesTab: React.FC<ResponseCurvesTabProps> = () => {
   const scatterData = generateScatterData(selectedVariable);
   const roiLineData = generateROILineData(scatterData);
 
-  // Calculate rounded axis limits based on investment data (x values)
-  const maxInvestment = scatterData.length > 0 ? Math.max(...scatterData.map(d => d.x)) : 0;
-  const maxContribution = scatterData.length > 0 ? Math.max(...scatterData.map(d => d.y)) : 0;
-
-  const maxX = scatterData.length > 0 ? roundToNextThousand(maxInvestment) : 10000;
-  const maxY = scatterData.length > 0 ? roundToNextThousand(maxContribution) : 10000;
-
   // Format currency
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-EU', {
@@ -117,8 +106,8 @@ const ResponseCurvesTab: React.FC<ResponseCurvesTabProps> = () => {
     }).format(value);
   };
 
-  // Format compact currency for axis labels
-  const formatCompactCurrency = (value: number) => {
+  // Format axis labels
+  const formatAxisLabel = (value: number) => {
     if (value >= 1000000) {
       return `€${(value / 1000000).toFixed(1)}M`;
     } else if (value >= 1000) {
@@ -158,10 +147,10 @@ const ResponseCurvesTab: React.FC<ResponseCurvesTabProps> = () => {
       <div className="card">
         <h3 className="text-lg font-medium mb-4 flex items-center gap-2">
           <TrendingUp size={18} className="text-primary-600" />
-          Investment vs. Contribution - {selectedVariable}
+          Scatter Plot of Weekly Points: Investment vs. Contribution - {selectedVariable}
         </h3>
 
-        <div className="h-[800px]">
+        <div className="h-[800px] relative">
           <ResponsiveContainer width="100%" height="100%">
             <ScatterChart
               margin={{ top: 20, right: 30, bottom: 60, left: 60 }}
@@ -172,26 +161,16 @@ const ResponseCurvesTab: React.FC<ResponseCurvesTabProps> = () => {
                 type="number"
                 dataKey="x"
                 name="Investment"
-                unit=""
-                tickFormatter={formatCompactCurrency}
+                tickFormatter={formatAxisLabel}
                 label={{ value: 'Investment', position: 'insideBottom', offset: -10, style: { fontSize: '14px', fontWeight: 'bold' } }}
-                domain={[0, maxX]}
-                allowDataOverflow={false}
-                allowDecimals={false}
-                padding={{ left: 0, right: 0 }}
               />
 
               <YAxis
                 type="number"
                 dataKey="y"
                 name="Contribution"
-                unit=""
-                tickFormatter={formatCompactCurrency}
+                tickFormatter={formatAxisLabel}
                 label={{ value: 'Contribution', angle: -90, position: 'insideLeft', offset: -10, style: { fontSize: '14px', fontWeight: 'bold' } }}
-                domain={[0, maxY]}
-                allowDataOverflow={false}
-                allowDecimals={false}
-                padding={{ top: 0, bottom: 0 }}
               />
 
               <Tooltip
@@ -211,7 +190,7 @@ const ResponseCurvesTab: React.FC<ResponseCurvesTabProps> = () => {
                               <span className="font-semibold">Contribution:</span> {formatCurrency(data.y)}
                             </p>
                             <p className="text-base text-gray-700">
-                              <span className="font-semibold">Date:</span> {data.month}
+                              <span className="font-semibold">Date:</span> {data.formattedDate || data.date ? new Date(data.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : data.month}
                             </p>
                             <p className="text-base text-gray-700">
                               <span className="font-semibold">ROI:</span> {(data.y / data.x).toFixed(2)}x
@@ -231,12 +210,14 @@ const ResponseCurvesTab: React.FC<ResponseCurvesTabProps> = () => {
               />
 
               {/* ROI = 1 reference line */}
-              <Scatter
-                name="ROI = 1"
-                data={roiLineData}
-                line={{ stroke: '#9ca3af', strokeWidth: 2, strokeDasharray: '5 5' }}
-                legendType="line"
-              />
+              {scatterData.length > 0 && (
+                <Scatter
+                  name="ROI = 1"
+                  data={roiLineData}
+                  line={{ stroke: '#9ca3af', strokeWidth: 2, strokeDasharray: '5 5' }}
+                  legendType="line"
+                />
+              )}
 
               {/* Main scatter plot */}
               <Scatter
@@ -250,6 +231,12 @@ const ResponseCurvesTab: React.FC<ResponseCurvesTabProps> = () => {
               </Scatter>
             </ScatterChart>
           </ResponsiveContainer>
+          {/* ROI = 1 label positioned in top right */}
+          {scatterData.length > 0 && roiLineData.length > 0 && (
+            <div className="absolute top-6 right-12 text-sm font-medium text-gray-600">
+              ROI = 1
+            </div>
+          )}
         </div>
 
         <div className="mt-4 text-sm text-gray-600">
