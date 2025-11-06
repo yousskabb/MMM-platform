@@ -61,6 +61,61 @@ const getAvailableVariables = () => {
   return cachedData.variables.sort();
 };
 
+// Calculate average ROI from scatter data
+const calculateAverageROI = (scatterData: Array<{ x: number; y: number }>): number => {
+  if (scatterData.length === 0) return 1;
+
+  let totalROI = 0;
+  let validPoints = 0;
+
+  scatterData.forEach(point => {
+    if (point.x > 0) {
+      totalROI += point.y / point.x;
+      validPoints++;
+    }
+  });
+
+  return validPoints > 0 ? totalROI / validPoints : 1;
+};
+
+// Generate fake scatter data based on average ROI
+const generateFakeScatterData = (
+  realData: Array<{ x: number; y: number; date: string; formattedDate: string; year: number; month: string }>,
+  averageROI: number
+): Array<{ x: number; y: number; date: string; formattedDate: string; year: number; month: string }> => {
+  if (realData.length === 0) return [];
+
+  const minX = Math.min(...realData.map(d => d.x));
+  const maxX = Math.max(...realData.map(d => d.x));
+
+  const fakeData: Array<{ x: number; y: number; date: string; formattedDate: string; year: number; month: string }> = [];
+
+  // Generate same number of points as real data
+  for (let i = 0; i < realData.length; i++) {
+    // Random x value within the range
+    const randomX = minX + Math.random() * (maxX - minX);
+
+    // Calculate y based on average ROI with some randomness (±20%)
+    const baseY = randomX * averageROI;
+    const randomFactor = 0.8 + Math.random() * 0.4; // Random between 0.8 and 1.2
+    const randomY = baseY * randomFactor;
+
+    // Use the same date structure from real data (cycling through)
+    const realPoint = realData[i % realData.length];
+
+    fakeData.push({
+      x: randomX,
+      y: Math.max(0, randomY), // Ensure y is not negative
+      date: realPoint.date,
+      formattedDate: realPoint.formattedDate,
+      year: realPoint.year,
+      month: realPoint.month
+    });
+  }
+
+  return fakeData;
+};
+
 // Generate y=x reference line data (ROI = 1)
 const generateROILineData = (scatterData: Array<{ x: number; y: number }>) => {
   if (scatterData.length === 0) return [];
@@ -93,7 +148,14 @@ const ResponseCurvesTab: React.FC<ResponseCurvesTabProps> = () => {
     }
   });
 
-  const scatterData = generateScatterData(selectedVariable);
+  const realScatterData = generateScatterData(selectedVariable);
+
+  // Calculate average ROI from real data
+  const averageROI = calculateAverageROI(realScatterData);
+
+  // Generate fake scatter data based on average ROI
+  const scatterData = generateFakeScatterData(realScatterData, averageROI);
+
   const roiLineData = generateROILineData(scatterData);
 
   // Format currency
