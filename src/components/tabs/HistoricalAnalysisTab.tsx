@@ -12,7 +12,8 @@ import {
   Legend,
   ResponsiveContainer,
   BarChart,
-  Bar
+  Bar,
+  LabelList
 } from 'recharts';
 import { getCachedData, isDataLoaded } from '../../data/dataService';
 import { formatNumberAxis, formatNumberDetailed, formatNumber } from '../../utils/numberFormatter';
@@ -184,6 +185,54 @@ const HistoricalAnalysisTab: React.FC<HistoricalAnalysisTabProps> = ({ filters }
     });
   });
 
+  // Calculate min and max values for the selected metric
+  const getMetricMinMax = (metric: 'roi' | 'contribution' | 'investment') => {
+    let min = Infinity;
+    let max = -Infinity;
+
+    availableYears.forEach(year => {
+      contributionVariables.forEach(variable => {
+        const yearData = yearlyChannelData[year]?.[variable];
+        if (yearData) {
+          let value = 0;
+          if (metric === 'roi') {
+            value = yearData.roi;
+          } else if (metric === 'contribution') {
+            value = yearData.contribution;
+          } else if (metric === 'investment') {
+            value = yearData.investment;
+          }
+          if (value > 0) {
+            min = Math.min(min, value);
+            max = Math.max(max, value);
+          }
+        }
+      });
+    });
+
+    return { min: min === Infinity ? 0 : min, max: max === -Infinity ? 0 : max };
+  };
+
+  // Get color based on value (greenish for high, reddish for low)
+  const getValueColor = (value: number, min: number, max: number) => {
+    if (value <= 0 || min === max) {
+      return 'transparent';
+    }
+
+    // Normalize value to 0-1 range
+    const normalized = (value - min) / (max - min);
+
+    // Use very subtle colors - light greenish for high values, light reddish for low values
+    // Interpolate between light red (low) and light green (high)
+    // Using very light, pastel-like colors that are not too intense
+    const red = Math.round(250 - (normalized * 30)); // 250 (very light red) to 220
+    const green = Math.round(240 + (normalized * 15)); // 240 to 255 (very light green)
+    const blue = Math.round(240 - (normalized * 10)); // 240 to 230
+
+    return `rgb(${red}, ${green}, ${blue})`;
+  };
+
+  const { min: metricMin, max: metricMax } = getMetricMinMax(selectedMetric);
 
   return (
     <div className="space-y-6">
@@ -202,7 +251,7 @@ const HistoricalAnalysisTab: React.FC<HistoricalAnalysisTabProps> = ({ filters }
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={yearlyTotals}
-              margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+              margin={{ top: 30, right: 30, left: 0, bottom: 0 }}
             >
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis
@@ -231,21 +280,63 @@ const HistoricalAnalysisTab: React.FC<HistoricalAnalysisTabProps> = ({ filters }
                 dataKey="totalSales"
                 fill="#000000"
                 name="Total Sales"
-              />
+              >
+                <LabelList
+                  dataKey="totalSales"
+                  position="top"
+                  formatter={(value: number) => {
+                    if (value >= 1000000) {
+                      return `${(value / 1000000).toFixed(1)}M`;
+                    } else if (value >= 1000) {
+                      return `${(value / 1000).toFixed(1)}K`;
+                    }
+                    return value.toFixed(1);
+                  }}
+                  style={{ fontSize: '11px', fill: '#374151' }}
+                />
+              </Bar>
 
               {/* Total Contribution bar */}
               <Bar
                 dataKey="totalContribution"
                 fill="#3b82f6"
                 name="Total Contribution"
-              />
+              >
+                <LabelList
+                  dataKey="totalContribution"
+                  position="top"
+                  formatter={(value: number) => {
+                    if (value >= 1000000) {
+                      return `${(value / 1000000).toFixed(1)}M`;
+                    } else if (value >= 1000) {
+                      return `${(value / 1000).toFixed(1)}K`;
+                    }
+                    return value.toFixed(1);
+                  }}
+                  style={{ fontSize: '11px', fill: '#374151' }}
+                />
+              </Bar>
 
               {/* Total Investment bar */}
               <Bar
                 dataKey="totalInvestment"
                 fill="#10b981"
                 name="Total Investment"
-              />
+              >
+                <LabelList
+                  dataKey="totalInvestment"
+                  position="top"
+                  formatter={(value: number) => {
+                    if (value >= 1000000) {
+                      return `${(value / 1000000).toFixed(1)}M`;
+                    } else if (value >= 1000) {
+                      return `${(value / 1000).toFixed(1)}K`;
+                    }
+                    return value.toFixed(1);
+                  }}
+                  style={{ fontSize: '11px', fill: '#374151' }}
+                />
+              </Bar>
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -254,7 +345,7 @@ const HistoricalAnalysisTab: React.FC<HistoricalAnalysisTabProps> = ({ filters }
       <div className="card">
         <h3 className="text-lg font-medium mb-4 flex items-center gap-2">
           <LineChartIcon size={18} className="text-primary-600" />
-          Monthly Contribution Trends (All Years)
+          Monthly Contribution (All Years)
         </h3>
         <div className="h-80">
           <ResponsiveContainer width="100%" height="100%">
@@ -388,10 +479,16 @@ const HistoricalAnalysisTab: React.FC<HistoricalAnalysisTabProps> = ({ filters }
                         }
                       }
 
+                      const cellColor = getValueColor(value, metricMin, metricMax);
+
                       return (
                         <td
                           key={year}
                           className="text-center py-2 px-2 text-sm font-medium whitespace-nowrap"
+                          style={{
+                            backgroundColor: cellColor,
+                            transition: 'background-color 0.2s ease'
+                          }}
                         >
                           {displayValue}
                         </td>

@@ -2,9 +2,8 @@ import React, { useState, useEffect } from 'react';
 import Sidebar from './Sidebar';
 import FilterBar from './FilterBar';
 import { FilterState } from '../../types';
-import { Activity, BarChart3, PieChart, LineChart, MessageCircle, Calculator, TrendingUp, Loader2, Database, Eye, History } from 'lucide-react';
+import { Activity, BarChart3, PieChart, MessageCircle, Calculator, TrendingUp, Loader2, Database, History } from 'lucide-react';
 import RecapTab from '../tabs/RecapTab';
-import SynergiesTab from '../tabs/SynergiesTab';
 import ROITab from '../tabs/ROITab';
 import BudgetPlanningTab from '../tabs/BudgetPlanningTab';
 import SimulationsTab from '../tabs/SimulationsTab';
@@ -17,7 +16,7 @@ import ReportTab from '../tabs/ReportTab';
 import { loadExcelData, getAvailableYears } from '../../data/dataService';
 import { autoInitializeConversation } from '../../services/conversationLLMService';
 
-type Tab = 'recap' | 'synergies' | 'roi' | 'budget' | 'simulations' | 'response' | 'chat' | 'data' | 'llm-context' | 'historical' | 'report';
+type Tab = 'recap' | 'roi' | 'budget' | 'simulations' | 'response' | 'chat' | 'data' | 'llm-context' | 'historical' | 'report';
 
 interface TabConfig {
   id: Tab;
@@ -28,14 +27,12 @@ interface TabConfig {
 const tabConfig: TabConfig[] = [
   { id: 'recap', label: 'Recap', icon: <Activity size={20} /> },
   { id: 'historical', label: 'Historical Analysis', icon: <History size={20} /> },
-  { id: 'synergies', label: 'Synergies', icon: <LineChart size={20} /> },
   { id: 'roi', label: 'ROI', icon: <BarChart3 size={20} /> },
   { id: 'budget', label: 'Budget Planning', icon: <PieChart size={20} /> },
   { id: 'response', label: 'Response Curves', icon: <TrendingUp size={20} /> },
   { id: 'simulations', label: 'Simulations', icon: <Calculator size={20} /> },
   { id: 'chat', label: 'Chat with Your Data', icon: <MessageCircle size={20} /> },
   { id: 'data', label: 'Data', icon: <Database size={20} /> },
-  { id: 'llm-context', label: 'LLM Context', icon: <Eye size={20} /> },
 ];
 
 const Layout: React.FC = () => {
@@ -102,8 +99,6 @@ const Layout: React.FC = () => {
     switch (activeTab) {
       case 'recap':
         return <RecapTab filters={filters} onReportGenerated={setReportContent} onOpenReportTab={() => setActiveTab('report')} />;
-      case 'synergies':
-        return <SynergiesTab filters={filters} />;
       case 'roi':
         return <ROITab filters={filters} />;
       case 'budget':
